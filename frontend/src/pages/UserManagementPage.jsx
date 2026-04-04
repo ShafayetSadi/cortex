@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
-import { UserPlus } from 'lucide-react'
+import { Trash2, UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import api from '../api/client'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Spinner } from '../components/ui/spinner'
+import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 
 const emptyForm = { name: '', email: '', password: '', role: 'user' }
@@ -14,7 +15,9 @@ const UserManagementPage = () => {
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
   const { showToast } = useToast()
+  const { user: currentUser } = useAuth()
 
   const loadUsers = async () => {
     setLoading(true)
@@ -50,6 +53,20 @@ const UserManagementPage = () => {
       await loadUsers()
     } catch {
       showToast('Failed to update role', 'error')
+    }
+  }
+
+  const deleteUser = async (userId) => {
+    if (!window.confirm('Delete this user? This cannot be undone.')) return
+    setDeletingId(userId)
+    try {
+      await api.delete(`/api/users/${userId}`)
+      showToast('User deleted')
+      setUsers((prev) => prev.filter((u) => u.id !== userId))
+    } catch {
+      showToast('Failed to delete user', 'error')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -162,12 +179,15 @@ const UserManagementPage = () => {
                 <th className="px-4 py-3 text-left font-mono text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Role
                 </th>
+                <th className="px-4 py-3 text-right font-mono text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-10 text-center">
+                  <td colSpan={4} className="px-4 py-10 text-center">
                     <div className="flex items-center justify-center gap-3 text-muted-foreground">
                       <Spinner /> <span className="text-sm">Loading users...</span>
                     </div>
@@ -175,7 +195,7 @@ const UserManagementPage = () => {
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     No users found.
                   </td>
                 </tr>
@@ -201,6 +221,18 @@ const UserManagementPage = () => {
                         <option value="user">user</option>
                         <option value="admin">admin</option>
                       </select>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {currentUser?.id !== user.id && (
+                        <button
+                          onClick={() => deleteUser(user.id)}
+                          disabled={deletingId === user.id}
+                          className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50"
+                          title="Delete user"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </td>
                   </motion.tr>
                 ))
