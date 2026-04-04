@@ -19,14 +19,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("documents") as batch_op:
-        batch_op.add_column(sa.Column("embedding", sa.JSON(), nullable=True))
-        batch_op.drop_column("summary_embedding")
-        batch_op.drop_column("summary")
+    op.add_column("documents", sa.Column("embedding", sa.JSON(), nullable=True))
+    op.drop_column("documents", "summary_embedding")
+    op.drop_column("documents", "summary")
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("documents") as batch_op:
-        batch_op.add_column(sa.Column("summary", sa.Text(), nullable=True))
-        batch_op.add_column(sa.Column("summary_embedding", sa.JSON(), nullable=True))
-        batch_op.drop_column("embedding")
+    op.add_column("documents", sa.Column("summary", sa.Text(), nullable=True))
+    op.add_column("documents", sa.Column("summary_embedding", sa.JSON(), nullable=True))
+    op.drop_column("documents", "embedding")
