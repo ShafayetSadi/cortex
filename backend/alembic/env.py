@@ -11,7 +11,7 @@ config = context.config
 
 # Set up Python logging from the ini file (if present)
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # ---------------------------------------------------------------------------
 # Import app models so Alembic can autogenerate migrations

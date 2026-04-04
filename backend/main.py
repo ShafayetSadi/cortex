@@ -13,7 +13,7 @@ def run_server():
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     reload_enabled = os.getenv("RELOAD", "false").lower() in {"1", "true", "yes"}
-    uvicorn.run("app.main:app", host=host, port=port, reload=reload_enabled)
+    uvicorn.run("app.main:app", host=host, port=port, reload=reload_enabled, log_level="info")
 
 
 def create_admin(name: str, email: str, password: str) -> None:
