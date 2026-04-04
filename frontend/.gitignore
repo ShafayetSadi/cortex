@@ -1,0 +1,83 @@
+# =============================================================================
+# Frontend .gitignore — React · Vite · Tailwind CSS · Node.js
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# The node_modules directory can always be restored via `npm install`.
+# -----------------------------------------------------------------------------
+node_modules/
+
+# -----------------------------------------------------------------------------
+# Build output
+# Vite writes the production build here; it is always reproducible.
+# -----------------------------------------------------------------------------
+dist/
+dist-ssr/
+build/
+
+# -----------------------------------------------------------------------------
+# Environment variables / secrets
+# .env.local and *.local variants hold machine-specific or secret values and
+# must never be committed.  Commit .env.example as a documented template only.
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+!.env.example        # allow a committed template
+
+# -----------------------------------------------------------------------------
+# Vite cache & internal files
+# -----------------------------------------------------------------------------
+.vite/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# -----------------------------------------------------------------------------
+# TypeScript build info (if TS is added later)
+# -----------------------------------------------------------------------------
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------------------
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+*.snap
+
+# -----------------------------------------------------------------------------
+# Package manager lockfiles / caches
+# Commit package-lock.json (npm) or yarn.lock / pnpm-lock.yaml so that CI and
+# teammates get a reproducible install.  Ignore local cache directories only.
+# -----------------------------------------------------------------------------
+.npm/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+.pnpm-store/
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------------------------------------------------------
+# Editor & OS artefacts (belt-and-suspenders; root .gitignore covers these too)
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.local

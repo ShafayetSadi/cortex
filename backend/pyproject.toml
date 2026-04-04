@@ -1,0 +1,19 @@
+[project]
+name = "cortex"
+version = "0.1.0"
+description = "FastAPI backend for Cortex — multi-tenant knowledge base platform"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.18.4",
+    "bcrypt>=5.0.0",
+    "email-validator>=2.3.0",
+    "fastapi>=0.135.3",
+    "httpx>=0.28.1",
+    "pydantic-settings>=2.13.1",
+    "python-jose>=3.5.0",
+    "python-multipart>=0.0.22",
+    "sqlalchemy>=2.0.48",
+    "pypdf>=5.0.0",
+    "uvicorn[standard]>=0.42.0",
+]
