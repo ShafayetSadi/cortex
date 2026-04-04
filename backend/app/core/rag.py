@@ -10,9 +10,9 @@ class RAGError(Exception):
 
 
 def answer_question(question: str, contexts: list[dict[str, str]]) -> str:
-    api_key = settings.github_token or settings.embeddings_api_key
+    api_key = settings.embeddings_api_key
     if not api_key:
-        raise RAGError("Missing GITHUB_TOKEN or EMBEDDINGS_API_KEY")
+        raise RAGError("Missing EMBEDDINGS_API_KEY")
 
     context_text = "\n\n".join(
         f"[Document: {ctx['title']}]\n{ctx['content']}"

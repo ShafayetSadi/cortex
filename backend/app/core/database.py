@@ -6,7 +6,9 @@ from app.core.config import settings
 
 engine = create_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

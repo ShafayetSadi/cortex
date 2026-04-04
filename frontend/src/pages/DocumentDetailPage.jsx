@@ -74,11 +74,12 @@ const DocumentDetailPage = () => {
         </div>
 
         {/* Content */}
-        <div className="p-7">
-          <p className="whitespace-pre-wrap text-sm leading-8 text-foreground">
-            {document.description}
-          </p>
-        </div>
+        <iframe
+          src={`/api/public/documents/${id}/file`}
+          title={document.title}
+          className="w-full"
+          style={{ height: '82vh' }}
+        />
       </article>
     </motion.div>
   )

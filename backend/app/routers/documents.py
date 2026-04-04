@@ -1,11 +1,11 @@
 from math import sqrt
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from sqlalchemy.orm import Session
+from fastapi.responses import Response
+from sqlalchemy.orm import Session, defer
 
 from app.core.database import get_db
 from app.core.embeddings import EmbeddingError, generate_embedding
-from app.core.html_sanitizer import sanitize_html, strip_html_to_text
 from app.core.pdf import PDFExtractionError, extract_text_from_pdf
 from app.core.rag import RAGError, answer_question
 from app.deps import get_current_user
@@ -45,7 +45,7 @@ def serialize_document(doc: Document) -> DocumentOut:
     return DocumentOut(
         id=doc.id,
         title=doc.title,
-        description=sanitize_html(doc.description),
+        description=doc.description,
         created_by=doc.created_by,
         created_at=doc.created_at,
         updated_at=doc.updated_at,
@@ -56,7 +56,7 @@ def serialize_public_document(doc: Document) -> PublicDocumentOut:
     return PublicDocumentOut(
         id=doc.id,
         title=doc.title,
-        description=sanitize_html(doc.description),
+        description=doc.description,
         created_at=doc.created_at,
         author_id=doc.creator.id,
         author_name=doc.creator.name,
@@ -67,7 +67,7 @@ def serialize_public_document(doc: Document) -> PublicDocumentOut:
 
 @router.get("/", response_model=list[DocumentOut])
 def list_documents(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    query = db.query(Document)
+    query = db.query(Document).options(defer(Document.file_data))
     if current_user.role != "admin":
         query = query.filter(Document.created_by == current_user.id)
     return [serialize_document(doc) for doc in query.order_by(Document.created_at.desc()).all()]
@@ -83,8 +83,9 @@ async def create_document(
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
+    file_bytes = await file.read()
     try:
-        content = extract_text_from_pdf(await file.read())
+        content = extract_text_from_pdf(file_bytes)
     except PDFExtractionError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -92,6 +93,7 @@ async def create_document(
         title=title,
         description=content,
         embedding=try_generate_embedding(content),
+        file_data=file_bytes,
         created_by=current_user.id,
     )
     db.add(doc)
@@ -108,7 +110,7 @@ async def update_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    doc = db.query(Document).filter(Document.id == document_id).first()
+    doc = db.query(Document).options(defer(Document.file_data)).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     if current_user.role != "admin" and doc.created_by != current_user.id:
@@ -120,12 +122,14 @@ async def update_document(
     if file:
         if not file.filename or not file.filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Only PDF files are supported")
+        file_bytes = await file.read()
         try:
-            content = extract_text_from_pdf(await file.read())
+            content = extract_text_from_pdf(file_bytes)
         except PDFExtractionError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         doc.description = content
         doc.embedding = try_generate_embedding(content)
+        doc.file_data = file_bytes
 
     db.commit()
     db.refresh(doc)
@@ -138,7 +142,7 @@ def delete_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    doc = db.query(Document).filter(Document.id == document_id).first()
+    doc = db.query(Document).options(defer(Document.file_data)).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     if current_user.role != "admin" and doc.created_by != current_user.id:
@@ -151,16 +155,28 @@ def delete_document(
 
 @public_router.get("/documents/", response_model=list[PublicDocumentOut])
 def list_public_documents(db: Session = Depends(get_db)):
-    docs = db.query(Document).join(Document.creator).order_by(Document.created_at.desc()).all()
+    docs = db.query(Document).options(defer(Document.file_data)).join(Document.creator).order_by(Document.created_at.desc()).all()
     return [serialize_public_document(doc) for doc in docs]
 
 
 @public_router.get("/documents/{document_id}", response_model=PublicDocumentOut)
 def get_public_document(document_id: int, db: Session = Depends(get_db)):
-    doc = db.query(Document).join(Document.creator).filter(Document.id == document_id).first()
+    doc = db.query(Document).options(defer(Document.file_data)).join(Document.creator).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return serialize_public_document(doc)
+
+
+@public_router.get("/documents/{document_id}/file")
+def get_document_file(document_id: int, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc or not doc.file_data:
+        raise HTTPException(status_code=404, detail="File not found")
+    return Response(
+        content=doc.file_data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{doc.title}.pdf"'},
+    )
 
 
 @public_router.post("/ask", response_model=AskResponse)
@@ -172,11 +188,12 @@ def ask(request: AskRequest, db: Session = Depends(get_db)):
     if question_embedding is None:
         raise HTTPException(status_code=503, detail="Unable to process question")
 
-    docs = db.query(Document).filter(Document.embedding.isnot(None)).all()
+    docs = db.query(Document).options(defer(Document.file_data)).filter(Document.embedding.isnot(None)).all()
 
     scored = [
         (doc, cosine_similarity(question_embedding, doc.embedding))
         for doc in docs
+        if doc.embedding is not None
     ]
     scored = [(doc, score) for doc, score in scored if score >= request.threshold]
     scored.sort(key=lambda x: x[1], reverse=True)
@@ -189,7 +206,7 @@ def ask(request: AskRequest, db: Session = Depends(get_db)):
         )
 
     contexts = [
-        {"title": doc.title, "content": strip_html_to_text(doc.description)}
+        {"title": doc.title, "content": doc.description}
         for doc, _ in top
     ]
 

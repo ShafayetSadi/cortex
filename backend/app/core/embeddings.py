@@ -10,10 +10,9 @@ class EmbeddingError(Exception):
 
 
 def generate_embedding(text: str) -> list[float]:
-    api_key = settings.embeddings_api_key or settings.github_token
-
+    api_key = settings.embeddings_api_key
     if not api_key:
-        raise EmbeddingError("Missing EMBEDDINGS_API_KEY or GITHUB_TOKEN")
+        raise EmbeddingError("Missing EMBEDDINGS_API_KEY")
 
     endpoint = f"{settings.embeddings_base_url.rstrip('/')}/embeddings"
     payload: dict[str, Any] = {
