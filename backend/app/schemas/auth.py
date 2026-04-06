@@ -10,6 +10,14 @@ class RegisterRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
+    invite_token: str  # required — must have a valid workspace invite to register
+
+
+class RegisterWorkspaceRequest(BaseModel):
+    workspace_name: str
+    admin_name: str
+    admin_email: EmailStr
+    password: str
 
 
 class Token(BaseModel):

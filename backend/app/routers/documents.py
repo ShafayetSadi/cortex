@@ -22,6 +22,8 @@ from app.schemas.document import (
 )
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
+# Public router was formerly for unauthenticated, but RAG requires workspace scoping.
+# We will require authentication for these as per the workspace plan.
 public_router = APIRouter(prefix="/api/public", tags=["public"])
 
 
@@ -48,6 +50,7 @@ def create_chunks(doc: Document, content: str, db: Session) -> None:
         db.add(
             DocumentChunk(
                 document_id=doc.id,
+                workspace_id=doc.workspace_id,
                 chunk_index=i,
                 content=chunk_content,
                 embedding=try_generate_embedding(chunk_content),
@@ -84,7 +87,11 @@ def serialize_public_document(doc: Document) -> PublicDocumentOut:
 def list_documents(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    query = db.query(Document).options(defer(Document.file_data))
+    query = (
+        db.query(Document)
+        .options(defer(Document.file_data))
+        .filter(Document.workspace_id == current_user.workspace_id)
+    )
     if current_user.role != "admin":
         query = query.filter(Document.created_by == current_user.id)
     return [
@@ -114,6 +121,7 @@ async def create_document(
         description=content,
         file_data=file_bytes,
         created_by=current_user.id,
+        workspace_id=current_user.workspace_id,
     )
     db.add(doc)
     db.flush()  # populate doc.id before creating chunks
@@ -134,7 +142,10 @@ async def update_document(
     doc = (
         db.query(Document)
         .options(defer(Document.file_data))
-        .filter(Document.id == document_id)
+        .filter(
+            Document.id == document_id,
+            Document.workspace_id == current_user.workspace_id,
+        )
         .first()
     )
     if not doc:
@@ -172,7 +183,10 @@ def delete_document(
     doc = (
         db.query(Document)
         .options(defer(Document.file_data))
-        .filter(Document.id == document_id)
+        .filter(
+            Document.id == document_id,
+            Document.workspace_id == current_user.workspace_id,
+        )
         .first()
     )
     if not doc:
@@ -183,15 +197,18 @@ def delete_document(
     db.commit()
 
 
-# --- Public endpoints ---
+# --- Scoped RAG & Fetch endpoints ---
 
 
 @public_router.get("/documents/", response_model=list[PublicDocumentOut])
-def list_public_documents(db: Session = Depends(get_db)):
+def list_public_documents(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     docs = (
         db.query(Document)
         .options(defer(Document.file_data))
         .join(Document.creator)
+        .filter(Document.workspace_id == current_user.workspace_id)
         .order_by(Document.created_at.desc())
         .all()
     )
@@ -199,12 +216,19 @@ def list_public_documents(db: Session = Depends(get_db)):
 
 
 @public_router.get("/documents/{document_id}", response_model=PublicDocumentOut)
-def get_public_document(document_id: int, db: Session = Depends(get_db)):
+def get_public_document(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     doc = (
         db.query(Document)
         .options(defer(Document.file_data))
         .join(Document.creator)
-        .filter(Document.id == document_id)
+        .filter(
+            Document.id == document_id,
+            Document.workspace_id == current_user.workspace_id,
+        )
         .first()
     )
     if not doc:
@@ -213,8 +237,19 @@ def get_public_document(document_id: int, db: Session = Depends(get_db)):
 
 
 @public_router.get("/documents/{document_id}/file")
-def get_document_file(document_id: int, db: Session = Depends(get_db)):
-    doc = db.query(Document).filter(Document.id == document_id).first()
+def get_document_file(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    doc = (
+        db.query(Document)
+        .filter(
+            Document.id == document_id,
+            Document.workspace_id == current_user.workspace_id,
+        )
+        .first()
+    )
     if not doc or not doc.file_data:
         raise HTTPException(status_code=404, detail="File not found")
     return Response(
@@ -225,7 +260,11 @@ def get_document_file(document_id: int, db: Session = Depends(get_db)):
 
 
 @public_router.post("/ask", response_model=AskResponse)
-def ask(request: AskRequest, db: Session = Depends(get_db)):
+def ask(
+    request: AskRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
@@ -236,6 +275,7 @@ def ask(request: AskRequest, db: Session = Depends(get_db)):
     chunks = (
         db.query(DocumentChunk)
         .options(joinedload(DocumentChunk.document))
+        .filter(DocumentChunk.workspace_id == current_user.workspace_id)
         .filter(DocumentChunk.embedding.isnot(None))
         .all()
     )
@@ -253,7 +293,10 @@ def ask(request: AskRequest, db: Session = Depends(get_db)):
         # Fallback: keyword search over all chunks when semantic similarity is too low
         keywords = [w.lower() for w in request.question.split() if len(w) > 2]
         keyword_chunks = (
-            db.query(DocumentChunk).options(joinedload(DocumentChunk.document)).all()
+            db.query(DocumentChunk)
+            .options(joinedload(DocumentChunk.document))
+            .filter(DocumentChunk.workspace_id == current_user.workspace_id)
+            .all()
         )
         keyword_matches: list[tuple[DocumentChunk, float]] = []
         for chunk in keyword_chunks:

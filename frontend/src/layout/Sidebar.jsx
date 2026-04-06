@@ -1,39 +1,44 @@
-import { motion } from 'framer-motion'
-import { LayoutDashboard, Shield, Users } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { motion } from "framer-motion";
+import { LayoutDashboard, Settings, Shield, Users } from "lucide-react";
+import { NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const menuGroups = {
   admin: [
     {
-      title: 'Overview',
-      items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+      title: "Overview",
+      items: [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
     },
     {
-      title: 'Management',
-      items: [{ to: '/users', label: 'User Management', icon: Users }],
+      title: "Workspace",
+      items: [
+        { to: "/users", label: "Team Management", icon: Users },
+        { to: "/workspace", label: "Workspace Settings", icon: Settings },
+      ],
     },
     {
-      title: 'Account',
-      items: [{ to: '/profile', label: 'Profile', icon: Shield }],
+      title: "Account",
+      items: [{ to: "/profile", label: "Profile", icon: Shield }],
     },
   ],
   user: [
     {
-      title: 'Overview',
-      items: [{ to: '/dashboard', label: 'My Dashboard', icon: LayoutDashboard }],
+      title: "Overview",
+      items: [
+        { to: "/dashboard", label: "My Dashboard", icon: LayoutDashboard },
+      ],
     },
     {
-      title: 'Account',
-      items: [{ to: '/profile', label: 'Profile', icon: Shield }],
+      title: "Account",
+      items: [{ to: "/profile", label: "Profile", icon: Shield }],
     },
   ],
-}
+};
 
 const Sidebar = ({ open, onClose }) => {
-  const { user } = useAuth()
-  if (!user) return null
-  const groups = menuGroups[user.role] ?? menuGroups.user
+  const { user, workspace } = useAuth();
+  if (!user) return null;
+  const groups = menuGroups[user.role] ?? menuGroups.user;
 
   return (
     <>
@@ -47,11 +52,11 @@ const Sidebar = ({ open, onClose }) => {
 
       <aside
         className={[
-          'fixed inset-y-14 left-0 z-40 w-60 border-r border-border bg-background',
-          'flex flex-col transition-transform duration-300 ease-out',
-          open ? 'translate-x-0' : '-translate-x-full',
-          'md:translate-x-0',
-        ].join(' ')}
+          "fixed inset-y-14 left-0 z-40 w-60 border-r border-border bg-background",
+          "flex flex-col transition-transform duration-300 ease-out",
+          open ? "translate-x-0" : "-translate-x-full",
+          "md:translate-x-0",
+        ].join(" ")}
       >
         <motion.div
           initial={{ opacity: 0 }}
@@ -61,9 +66,15 @@ const Sidebar = ({ open, onClose }) => {
         >
           {/* Workspace label */}
           <div className="mb-6 pb-4 border-b border-border">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Workspace</p>
-            <p className="mt-1.5 font-heading text-base font-semibold text-foreground">Cortex</p>
-            <p className="mt-0.5 font-mono text-xs text-muted-foreground capitalize">{user.name} · {user.role}</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Workspace
+            </p>
+            <p className="mt-1.5 font-heading text-base font-semibold text-foreground">
+              {workspace?.name || "Cortex"}
+            </p>
+            <p className="mt-0.5 font-mono text-xs text-muted-foreground capitalize">
+              {user.name} · {user.role}
+            </p>
           </div>
 
           {/* Nav groups */}
@@ -75,7 +86,7 @@ const Sidebar = ({ open, onClose }) => {
                 </p>
                 <div className="flex flex-col gap-0.5">
                   {group.items.map((item) => {
-                    const Icon = item.icon
+                    const Icon = item.icon;
                     return (
                       <NavLink
                         key={item.to}
@@ -83,17 +94,17 @@ const Sidebar = ({ open, onClose }) => {
                         onClick={onClose}
                         className={({ isActive }) =>
                           [
-                            'flex items-center gap-2.5 rounded-sm px-3 py-2 text-sm font-medium transition-colors duration-150',
+                            "flex items-center gap-2.5 rounded-sm px-3 py-2 text-sm font-medium transition-colors duration-150",
                             isActive
-                              ? 'bg-primary text-primary-foreground'
-                              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                          ].join(' ')
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          ].join(" ")
                         }
                       >
                         <Icon className="h-4 w-4 shrink-0" />
                         {item.label}
                       </NavLink>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -103,12 +114,14 @@ const Sidebar = ({ open, onClose }) => {
 
         {/* User info at bottom */}
         <div className="border-t border-border p-4">
-          <p className="text-xs font-medium text-foreground truncate">{user.name}</p>
+          <p className="text-xs font-medium text-foreground truncate">
+            {user.name}
+          </p>
           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
         </div>
       </aside>
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;

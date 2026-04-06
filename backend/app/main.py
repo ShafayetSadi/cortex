@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from alembic import command
 from app.core.config import settings
 from app.core.database import get_db
-from app.routers import auth, documents, users
+from app.routers import auth, documents, users, workspaces
 
 
 def run_migrations() -> None:
@@ -37,6 +37,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(documents.router)
 app.include_router(documents.public_router)
+app.include_router(workspaces.router)
 
 
 @app.get("/")

@@ -12,6 +12,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    workspace_id: int
 
 
 class UserUpdate(BaseModel):
@@ -23,6 +24,7 @@ class UserUpdate(BaseModel):
 
 class UserOut(UserBase):
     id: int
+    workspace_id: int
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

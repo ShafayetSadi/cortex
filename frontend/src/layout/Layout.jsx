@@ -13,7 +13,7 @@ const Layout = ({ children }) => {
 
   const hasDashboardShell = useMemo(() => {
     if (!user) return false
-    return ['/dashboard', '/users', '/profile'].some((path) =>
+    return ['/dashboard', '/users', '/profile', '/workspace'].some((path) =>
       location.pathname.startsWith(path),
     )
   }, [location.pathname, user])

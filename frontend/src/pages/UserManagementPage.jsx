@@ -1,74 +1,81 @@
-import { motion } from 'framer-motion'
-import { Trash2, UserPlus } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import api from '../api/client'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Spinner } from '../components/ui/spinner'
-import { useAuth } from '../context/AuthContext'
-import { useToast } from '../context/ToastContext'
+import { motion } from "framer-motion";
+import { Trash2, UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import api from "../api/client";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Spinner } from "../components/ui/spinner";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
-const emptyForm = { name: '', email: '', password: '', role: 'user' }
+const emptyForm = { name: "", email: "", password: "", role: "user" };
 
 const UserManagementPage = () => {
-  const [users, setUsers] = useState([])
-  const [form, setForm] = useState(emptyForm)
-  const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
-  const [deletingId, setDeletingId] = useState(null)
-  const { showToast } = useToast()
-  const { user: currentUser } = useAuth()
+  const [users, setUsers] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const { showToast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const loadUsers = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const { data } = await api.get('/api/users/')
-      setUsers(data)
+      const { data } = await api.get("/api/users/");
+      setUsers(data);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => { loadUsers() }, [])
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   const createUser = async (e) => {
-    e.preventDefault()
-    setCreating(true)
+    e.preventDefault();
+    setCreating(true);
     try {
-      await api.post('/api/users/', form)
-      showToast('User created successfully')
-      setForm(emptyForm)
-      await loadUsers()
+      await api.post("/api/users/", form);
+      showToast("Team member added successfully");
+      setForm(emptyForm);
+      await loadUsers();
     } catch {
-      showToast('Failed to create user', 'error')
+      showToast("Failed to add team member", "error");
     } finally {
-      setCreating(false)
+      setCreating(false);
     }
-  }
+  };
 
   const changeRole = async (userId, role) => {
     try {
-      await api.put(`/api/users/${userId}`, { role })
-      showToast('Role updated')
-      await loadUsers()
+      await api.put(`/api/users/${userId}`, { role });
+      showToast("Role updated");
+      await loadUsers();
     } catch {
-      showToast('Failed to update role', 'error')
+      showToast("Failed to update role", "error");
     }
-  }
+  };
 
   const deleteUser = async (userId) => {
-    if (!window.confirm('Delete this user? This cannot be undone.')) return
-    setDeletingId(userId)
+    if (
+      !window.confirm(
+        "Remove this member from the workspace? This cannot be undone.",
+      )
+    )
+      return;
+    setDeletingId(userId);
     try {
-      await api.delete(`/api/users/${userId}`)
-      showToast('User deleted')
-      setUsers((prev) => prev.filter((u) => u.id !== userId))
+      await api.delete(`/api/users/${userId}`);
+      showToast("Member removed");
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
     } catch {
-      showToast('Failed to delete user', 'error')
+      showToast("Failed to remove member", "error");
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
-  }
+  };
 
   return (
     <div className="space-y-8">
@@ -76,11 +83,15 @@ const UserManagementPage = () => {
       <div>
         <div className="mb-1 flex items-center gap-2">
           <div className="h-px w-6 bg-primary" />
-          <span className="font-mono text-xs uppercase tracking-widest text-primary">Admin</span>
+          <span className="font-mono text-xs uppercase tracking-widest text-primary">
+            Workspace Admin
+          </span>
         </div>
-        <h1 className="font-heading text-4xl font-bold text-foreground">User Management</h1>
+        <h1 className="font-heading text-4xl font-bold text-foreground">
+          Workspace Team
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Create and manage user accounts and roles.
+          Invite members to your workspace and manage their roles.
         </p>
       </div>
 
@@ -94,7 +105,7 @@ const UserManagementPage = () => {
         <div className="flex items-center gap-3 border-b border-border bg-muted/30 px-6 py-4">
           <UserPlus className="h-4 w-4 text-muted-foreground" />
           <p className="font-mono text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Create User
+            Invite Member
           </p>
         </div>
         <form onSubmit={createUser} className="p-6">
@@ -124,7 +135,7 @@ const UserManagementPage = () => {
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Password
+                Temporary Password
               </label>
               <Input
                 type="password"
@@ -136,21 +147,21 @@ const UserManagementPage = () => {
             </div>
             <div className="grid gap-1.5">
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Role
+                Workspace Role
               </label>
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="rounded-sm border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-2 focus:outline-ring focus:outline-offset-1"
               >
-                <option value="user">User</option>
+                <option value="user">Member</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
           </div>
           <Button type="submit" disabled={creating} className="mt-5 gap-2">
             <UserPlus className="h-3.5 w-3.5" />
-            {creating ? 'Creating...' : 'Create User'}
+            {creating ? "Inviting..." : "Invite Member"}
           </Button>
         </form>
       </motion.div>
@@ -162,8 +173,12 @@ const UserManagementPage = () => {
         transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
-          <h2 className="font-heading text-xl font-semibold text-foreground">All Users</h2>
-          <span className="font-mono text-xs text-muted-foreground">{users.length} total</span>
+          <h2 className="font-heading text-xl font-semibold text-foreground">
+            Workspace Members
+          </h2>
+          <span className="font-mono text-xs text-muted-foreground">
+            {users.length} total
+          </span>
         </div>
 
         <div className="overflow-hidden rounded-sm border border-border">
@@ -189,14 +204,18 @@ const UserManagementPage = () => {
                 <tr>
                   <td colSpan={4} className="px-4 py-10 text-center">
                     <div className="flex items-center justify-center gap-3 text-muted-foreground">
-                      <Spinner /> <span className="text-sm">Loading users...</span>
+                      <Spinner />{" "}
+                      <span className="text-sm">Loading members...</span>
                     </div>
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    No users found.
+                  <td
+                    colSpan={4}
+                    className="px-4 py-10 text-center text-sm text-muted-foreground"
+                  >
+                    No members found.
                   </td>
                 </tr>
               ) : (
@@ -208,7 +227,9 @@ const UserManagementPage = () => {
                     transition={{ delay: i * 0.04 }}
                     className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors"
                   >
-                    <td className="px-4 py-3 font-medium text-foreground">{user.name}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {user.name}
+                    </td>
                     <td className="hidden px-4 py-3 font-mono text-xs text-muted-foreground md:table-cell">
                       {user.email}
                     </td>
@@ -218,8 +239,8 @@ const UserManagementPage = () => {
                         onChange={(e) => changeRole(user.id, e.target.value)}
                         className="rounded-sm border border-border bg-card px-2 py-1 font-mono text-xs text-foreground focus:outline-2 focus:outline-ring"
                       >
-                        <option value="user">user</option>
-                        <option value="admin">admin</option>
+                        <option value="user">Member</option>
+                        <option value="admin">Admin</option>
                       </select>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -228,7 +249,7 @@ const UserManagementPage = () => {
                           onClick={() => deleteUser(user.id)}
                           disabled={deletingId === user.id}
                           className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50"
-                          title="Delete user"
+                          title="Remove member"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -242,7 +263,7 @@ const UserManagementPage = () => {
         </div>
       </motion.div>
     </div>
-  )
-}
+  );
+};
 
-export default UserManagementPage
+export default UserManagementPage;

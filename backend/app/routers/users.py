@@ -7,7 +7,6 @@ from app.deps import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.user import UserCreate, UserOut, UserUpdate
 
-
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 
@@ -17,20 +16,34 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/", response_model=list[UserOut], dependencies=[Depends(require_admin)])
-def list_users(db: Session = Depends(get_db)):
-    return db.query(User).order_by(User.created_at.desc()).all()
+def list_users(
+    current_user: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    return (
+        db.query(User)
+        .filter(User.workspace_id == current_user.workspace_id)
+        .order_by(User.created_at.desc())
+        .all()
+    )
 
 
-@router.post("/", response_model=UserOut, dependencies=[Depends(require_admin)], status_code=201)
-def create_user(payload: UserCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=UserOut, status_code=201)
+def create_user(
+    payload: UserCreate,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
     if db.query(User).filter(User.email == payload.email).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use"
+        )
 
     new_user = User(
         name=payload.name,
         email=payload.email,
         password=get_password_hash(payload.password),
         role=payload.role,
+        workspace_id=current_user.workspace_id,
     )
     db.add(new_user)
     db.commit()
@@ -38,9 +51,18 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@router.put("/{user_id}", response_model=UserOut, dependencies=[Depends(require_admin)])
-def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+@router.put("/{user_id}", response_model=UserOut)
+def update_user(
+    user_id: int,
+    payload: UserUpdate,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = (
+        db.query(User)
+        .filter(User.id == user_id, User.workspace_id == current_user.workspace_id)
+        .first()
+    )
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -64,7 +86,11 @@ def delete_user(
 ):
     if current_user.id == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = (
+        db.query(User)
+        .filter(User.id == user_id, User.workspace_id == current_user.workspace_id)
+        .first()
+    )
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     db.delete(user)

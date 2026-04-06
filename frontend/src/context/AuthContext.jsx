@@ -5,6 +5,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [workspace, setWorkspace] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,10 +21,13 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data } = await api.get("/api/users/me");
         setUser(data);
+        const { data: wsData } = await api.get("/api/workspaces/me");
+        setWorkspace(wsData);
       } catch {
         localStorage.removeItem("token");
         setToken(null);
         setUser(null);
+        setWorkspace(null);
       } finally {
         setLoading(false);
       }
@@ -48,12 +52,37 @@ export const AuthProvider = ({ children }) => {
 
     const me = await api.get("/api/users/me");
     setUser(me.data);
+    const ws = await api.get("/api/workspaces/me");
+    setWorkspace(ws.data);
   };
 
-  const register = async ({ name, email, password }) => {
+  const register = async ({ name, email, password, invite_token }) => {
     const { data } = await api.post("/api/auth/register", {
       name,
       email,
+      password,
+      invite_token,
+    });
+
+    localStorage.setItem("token", data.access_token);
+    setToken(data.access_token);
+
+    const me = await api.get("/api/users/me");
+    setUser(me.data);
+    const ws = await api.get("/api/workspaces/me");
+    setWorkspace(ws.data);
+  };
+
+  const registerWorkspace = async ({
+    workspace_name,
+    admin_name,
+    admin_email,
+    password,
+  }) => {
+    const { data } = await api.post("/api/auth/register-workspace", {
+      workspace_name,
+      admin_name,
+      admin_email,
       password,
     });
 
@@ -62,12 +91,15 @@ export const AuthProvider = ({ children }) => {
 
     const me = await api.get("/api/users/me");
     setUser(me.data);
+    const ws = await api.get("/api/workspaces/me");
+    setWorkspace(ws.data);
   };
 
   const logout = () => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
+    setWorkspace(null);
     setProfileImage(null);
   };
 
@@ -87,15 +119,17 @@ export const AuthProvider = ({ children }) => {
   const value = useMemo(
     () => ({
       user,
+      workspace,
       token,
       loading,
       login,
       register,
+      registerWorkspace,
       logout,
       profileImage,
       updateProfileImage,
     }),
-    [user, token, loading, profileImage],
+    [user, workspace, token, loading, profileImage],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
