@@ -1,20 +1,31 @@
-import { motion } from 'framer-motion'
-import { ArrowRight, BookOpen, CalendarDays, Search, Sliders, UserRound } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import api from '../api/client'
-import { Button } from '../components/ui/button'
-import { Spinner } from '../components/ui/spinner'
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarDays,
+  Search,
+  Sliders,
+  UserRound,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import api from "../api/client";
+import { Button } from "../components/ui/button";
+import { Spinner } from "../components/ui/spinner";
 
 const stagger = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.07 } },
-}
+};
 
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
-}
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+  },
+};
 
 const DocumentCard = ({ doc, index }) => (
   <motion.div variants={fadeUp}>
@@ -35,51 +46,55 @@ const DocumentCard = ({ doc, index }) => (
           </span>
           <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
             <CalendarDays className="h-3 w-3" />
-            {new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {new Date(doc.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
           </span>
         </div>
       </article>
     </Link>
   </motion.div>
-)
+);
 
 const HomePage = () => {
-  const [question, setQuestion] = useState('')
-  const [threshold, setThreshold] = useState(30)
-  const [topK, setTopK] = useState(5)
-  const [answer, setAnswer] = useState(null)
-  const [asking, setAsking] = useState(false)
-  const [askError, setAskError] = useState('')
-  const [documents, setDocuments] = useState([])
-  const [docsLoading, setDocsLoading] = useState(true)
-  const [showSliders, setShowSliders] = useState(false)
+  const [question, setQuestion] = useState("");
+  const [threshold, setThreshold] = useState(30);
+  const [topK, setTopK] = useState(5);
+  const [answer, setAnswer] = useState(null);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState("");
+  const [documents, setDocuments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(true);
+  const [showSliders, setShowSliders] = useState(false);
 
   useEffect(() => {
     api
-      .get('/api/public/documents/')
+      .get("/api/public/documents/")
       .then(({ data }) => setDocuments(data))
-      .finally(() => setDocsLoading(false))
-  }, [])
+      .finally(() => setDocsLoading(false));
+  }, []);
 
   const handleAsk = async (e) => {
-    e.preventDefault()
-    if (!question.trim()) return
-    setAsking(true)
-    setAskError('')
-    setAnswer(null)
+    e.preventDefault();
+    if (!question.trim()) return;
+    setAsking(true);
+    setAskError("");
+    setAnswer(null);
     try {
-      const { data } = await api.post('/api/public/ask', {
+      const { data } = await api.post("/api/public/ask", {
         question: question.trim(),
         threshold: threshold / 100,
         top_k: topK,
-      })
-      setAnswer(data)
+      });
+      setAnswer(data);
     } catch {
-      setAskError('Unable to process your question. Please try again.')
+      setAskError("Unable to process your question. Please try again.");
     } finally {
-      setAsking(false)
+      setAsking(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-16">
@@ -97,12 +112,13 @@ const HomePage = () => {
           </span>
         </div>
         <h1 className="font-heading text-5xl font-bold leading-[1.1] text-foreground md:text-6xl lg:text-7xl">
-          Ask Your<br />
+          Ask Your
+          <br />
           <span className="italic text-primary">Documents</span>
         </h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Ask any question and receive AI-generated answers grounded in your uploaded documents.
-          Powered by retrieval-augmented generation.
+          Ask any question and receive AI-generated answers grounded in your
+          uploaded documents. Powered by retrieval-augmented generation.
         </p>
 
         {/* ─── Q&A Form ────────────────────────────────────────────── */}
@@ -123,18 +139,18 @@ const HomePage = () => {
                 type="button"
                 onClick={() => setShowSliders((v) => !v)}
                 className={[
-                  'flex h-8 w-8 items-center justify-center rounded-sm transition-colors',
+                  "flex h-8 w-8 items-center justify-center rounded-sm transition-colors",
                   showSliders
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                ].join(' ')}
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                ].join(" ")}
                 title="Adjust search parameters"
               >
                 <Sliders className="h-3.5 w-3.5" />
               </button>
               <Button type="submit" disabled={asking} className="h-9">
                 {asking ? <Spinner className="h-3.5 w-3.5" /> : null}
-                {asking ? 'Thinking...' : 'Ask'}
+                {asking ? "Thinking..." : "Ask"}
               </Button>
             </div>
           </form>
@@ -143,7 +159,7 @@ const HomePage = () => {
           {showSliders && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
+              animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="overflow-hidden border-t border-border"
@@ -154,7 +170,9 @@ const HomePage = () => {
                     <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Min Relevance
                     </label>
-                    <span className="font-mono text-xs text-foreground">{threshold}%</span>
+                    <span className="font-mono text-xs text-foreground">
+                      {threshold}%
+                    </span>
                   </div>
                   <input
                     type="range"
@@ -170,7 +188,9 @@ const HomePage = () => {
                     <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Max Sources
                     </label>
-                    <span className="font-mono text-xs text-foreground">{topK}</span>
+                    <span className="font-mono text-xs text-foreground">
+                      {topK}
+                    </span>
                   </div>
                   <input
                     type="range"
@@ -201,10 +221,12 @@ const HomePage = () => {
             className="mt-4 overflow-hidden rounded-sm border border-border bg-card"
           >
             <div className="border-b border-border bg-muted/30 px-5 py-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Answer</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Answer
+              </p>
             </div>
             <div className="p-5">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+              <p className="whitespace-pre-wrap text-base leading-relaxed text-foreground">
                 {answer.answer}
               </p>
 
@@ -250,7 +272,7 @@ const HomePage = () => {
             </h2>
           </div>
           <span className="font-mono text-sm text-muted-foreground">
-            {documents.length} doc{documents.length !== 1 ? 's' : ''}
+            {documents.length} doc{documents.length !== 1 ? "s" : ""}
           </span>
         </div>
 
@@ -262,7 +284,9 @@ const HomePage = () => {
           <div className="flex flex-col items-center justify-center rounded-sm border border-dashed border-border py-16 text-center">
             <BookOpen className="mb-3 h-8 w-8 text-muted-foreground opacity-40" />
             <p className="text-sm text-muted-foreground">No documents yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground opacity-60">Upload a PDF to get started.</p>
+            <p className="mt-1 text-xs text-muted-foreground opacity-60">
+              Upload a PDF to get started.
+            </p>
           </div>
         ) : (
           <motion.div
@@ -278,7 +302,7 @@ const HomePage = () => {
         )}
       </section>
     </div>
-  )
-}
+  );
+};
 
-export default HomePage
+export default HomePage;

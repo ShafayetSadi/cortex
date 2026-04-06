@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     embeddings_api_key: str = ""
     embeddings_model: str = "text-embedding-3-small"
     embeddings_base_url: str = "https://models.inference.ai.azure.com"
-    summary_model: str = "gpt-4o-mini"
+    llm_model: str = "gpt-4o-mini"
     llm_base_url: str = "https://api.openai.com/v1"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 

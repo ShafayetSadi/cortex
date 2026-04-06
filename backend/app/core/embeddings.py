@@ -1,6 +1,5 @@
-from typing import Any
-
-import httpx
+from langchain_openai import OpenAIEmbeddings
+from pydantic import SecretStr
 
 from app.core.config import settings
 
@@ -14,19 +13,12 @@ def generate_embedding(text: str) -> list[float]:
     if not api_key:
         raise EmbeddingError("Missing EMBEDDINGS_API_KEY")
 
-    endpoint = f"{settings.embeddings_base_url.rstrip('/')}/embeddings"
-    payload: dict[str, Any] = {
-        "model": settings.embeddings_model,
-        "input": text,
-    }
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-
     try:
-        response = httpx.post(endpoint, json=payload, headers=headers, timeout=30)
-        response.raise_for_status()
-        return response.json()["data"][0]["embedding"]
-    except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
+        embeddings_client = OpenAIEmbeddings(
+            model=settings.embeddings_model,
+            openai_api_key=SecretStr(api_key),
+            openai_api_base=settings.embeddings_base_url,
+        )
+        return embeddings_client.embed_query(text)
+    except Exception as exc:
         raise EmbeddingError("Unable to generate embedding") from exc
