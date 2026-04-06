@@ -2,13 +2,15 @@ from math import sqrt
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
-from sqlalchemy.orm import Session, defer
+from sqlalchemy.orm import Session, defer, joinedload
 
+from app.core.chunking import chunk_text
 from app.core.database import get_db
 from app.core.embeddings import EmbeddingError, generate_embedding
 from app.core.pdf import PDFExtractionError, extract_text_from_pdf
 from app.core.rag import RAGError, answer_question
 from app.deps import get_current_user
+from app.models.chunk import DocumentChunk
 from app.models.document import Document
 from app.models.user import User
 from app.schemas.document import (
@@ -41,6 +43,18 @@ def try_generate_embedding(text: str) -> list[float] | None:
         return None
 
 
+def create_chunks(doc: Document, content: str, db: Session) -> None:
+    for i, chunk_content in enumerate(chunk_text(content)):
+        db.add(
+            DocumentChunk(
+                document_id=doc.id,
+                chunk_index=i,
+                content=chunk_content,
+                embedding=try_generate_embedding(chunk_content),
+            )
+        )
+
+
 def serialize_document(doc: Document) -> DocumentOut:
     return DocumentOut(
         id=doc.id,
@@ -65,12 +79,18 @@ def serialize_public_document(doc: Document) -> PublicDocumentOut:
 
 # --- Authenticated document management ---
 
+
 @router.get("/", response_model=list[DocumentOut])
-def list_documents(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_documents(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     query = db.query(Document).options(defer(Document.file_data))
     if current_user.role != "admin":
         query = query.filter(Document.created_by == current_user.id)
-    return [serialize_document(doc) for doc in query.order_by(Document.created_at.desc()).all()]
+    return [
+        serialize_document(doc)
+        for doc in query.order_by(Document.created_at.desc()).all()
+    ]
 
 
 @router.post("/", response_model=DocumentOut, status_code=201)
@@ -92,11 +112,12 @@ async def create_document(
     doc = Document(
         title=title,
         description=content,
-        embedding=try_generate_embedding(content),
         file_data=file_bytes,
         created_by=current_user.id,
     )
     db.add(doc)
+    db.flush()  # populate doc.id before creating chunks
+    create_chunks(doc, content, db)
     db.commit()
     db.refresh(doc)
     return serialize_document(doc)
@@ -110,7 +131,12 @@ async def update_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    doc = db.query(Document).options(defer(Document.file_data)).filter(Document.id == document_id).first()
+    doc = (
+        db.query(Document)
+        .options(defer(Document.file_data))
+        .filter(Document.id == document_id)
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     if current_user.role != "admin" and doc.created_by != current_user.id:
@@ -128,8 +154,9 @@ async def update_document(
         except PDFExtractionError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         doc.description = content
-        doc.embedding = try_generate_embedding(content)
         doc.file_data = file_bytes
+        db.query(DocumentChunk).filter(DocumentChunk.document_id == doc.id).delete()
+        create_chunks(doc, content, db)
 
     db.commit()
     db.refresh(doc)
@@ -142,7 +169,12 @@ def delete_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    doc = db.query(Document).options(defer(Document.file_data)).filter(Document.id == document_id).first()
+    doc = (
+        db.query(Document)
+        .options(defer(Document.file_data))
+        .filter(Document.id == document_id)
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     if current_user.role != "admin" and doc.created_by != current_user.id:
@@ -153,15 +185,28 @@ def delete_document(
 
 # --- Public endpoints ---
 
+
 @public_router.get("/documents/", response_model=list[PublicDocumentOut])
 def list_public_documents(db: Session = Depends(get_db)):
-    docs = db.query(Document).options(defer(Document.file_data)).join(Document.creator).order_by(Document.created_at.desc()).all()
+    docs = (
+        db.query(Document)
+        .options(defer(Document.file_data))
+        .join(Document.creator)
+        .order_by(Document.created_at.desc())
+        .all()
+    )
     return [serialize_public_document(doc) for doc in docs]
 
 
 @public_router.get("/documents/{document_id}", response_model=PublicDocumentOut)
 def get_public_document(document_id: int, db: Session = Depends(get_db)):
-    doc = db.query(Document).options(defer(Document.file_data)).join(Document.creator).filter(Document.id == document_id).first()
+    doc = (
+        db.query(Document)
+        .options(defer(Document.file_data))
+        .join(Document.creator)
+        .filter(Document.id == document_id)
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return serialize_public_document(doc)
@@ -188,16 +233,37 @@ def ask(request: AskRequest, db: Session = Depends(get_db)):
     if question_embedding is None:
         raise HTTPException(status_code=503, detail="Unable to process question")
 
-    docs = db.query(Document).options(defer(Document.file_data)).filter(Document.embedding.isnot(None)).all()
+    chunks = (
+        db.query(DocumentChunk)
+        .options(joinedload(DocumentChunk.document))
+        .filter(DocumentChunk.embedding.isnot(None))
+        .all()
+    )
 
     scored = [
-        (doc, cosine_similarity(question_embedding, doc.embedding))
-        for doc in docs
-        if doc.embedding is not None
+        (chunk, cosine_similarity(question_embedding, chunk.embedding))
+        for chunk in chunks
+        if chunk.embedding is not None
     ]
-    scored = [(doc, score) for doc, score in scored if score >= request.threshold]
+    scored = [(chunk, score) for chunk, score in scored if score >= request.threshold]
     scored.sort(key=lambda x: x[1], reverse=True)
     top = scored[: request.top_k]
+
+    if not top:
+        # Fallback: keyword search over all chunks when semantic similarity is too low
+        keywords = [w.lower() for w in request.question.split() if len(w) > 2]
+        keyword_chunks = (
+            db.query(DocumentChunk).options(joinedload(DocumentChunk.document)).all()
+        )
+        keyword_matches: list[tuple[DocumentChunk, float]] = []
+        for chunk in keyword_chunks:
+            content_lower = chunk.content.lower()
+            hit_count = sum(1 for kw in keywords if kw in content_lower)
+            if hit_count > 0:
+                keyword_matches.append((chunk, hit_count / len(keywords)))
+
+        keyword_matches.sort(key=lambda x: x[1], reverse=True)
+        top = keyword_matches[: request.top_k]
 
     if not top:
         return AskResponse(
@@ -206,8 +272,7 @@ def ask(request: AskRequest, db: Session = Depends(get_db)):
         )
 
     contexts = [
-        {"title": doc.title, "content": doc.description}
-        for doc, _ in top
+        {"title": chunk.document.title, "content": chunk.content} for chunk, _ in top
     ]
 
     try:
@@ -215,7 +280,17 @@ def ask(request: AskRequest, db: Session = Depends(get_db)):
     except RAGError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
+    # Deduplicate sources by document, keeping the highest chunk score per doc
+    best: dict[int, tuple[Document, float]] = {}
+    for chunk, score in top:
+        doc = chunk.document
+        if doc.id not in best or score > best[doc.id][1]:
+            best[doc.id] = (doc, score)
+
     return AskResponse(
         answer=answer,
-        sources=[AskSource(id=doc.id, title=doc.title, score=round(score, 4)) for doc, score in top],
+        sources=[
+            AskSource(id=doc.id, title=doc.title, score=round(score, 4))
+            for doc, score in best.values()
+        ],
     )

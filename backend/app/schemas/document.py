@@ -41,7 +41,7 @@ class AskSource(BaseModel):
 
 class AskRequest(BaseModel):
     question: str
-    threshold: float = 0.3
+    threshold: float = 0.2
     top_k: int = 5
 
 
