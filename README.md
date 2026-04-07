@@ -153,7 +153,7 @@ VITE_API_URL=http://localhost:8000
 ## Roadmap
 
 - [x] Foundation — JWT auth, role-based access, document CRUD, RAG-powered Q&A, user management
-- [ ] Workspace provisioning — organizations self-register and manage their own workspace
+- [x] Workspace provisioning — organizations self-register and manage their own workspace
 - [ ] Chat interface — multi-turn conversations with context carried across questions
 - [ ] Document collections — organize documents into folders within a workspace
 - [ ] Streaming answers — stream tokens as the LLM generates them
