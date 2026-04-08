@@ -61,11 +61,16 @@ const Header = ({ onMenuClick }) => {
             </button>
           )}
 
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-2.5 group">
             <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-primary text-primary-foreground">
-              <span className="font-mono text-xs font-bold">DQ</span>
+              <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
+                <path
+                  d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z"
+                  fill="currentColor"
+                />
+              </svg>
             </div>
-            <span className="hidden font-heading text-lg font-semibold leading-none tracking-tight text-foreground md:block">
+            <span className="hidden font-heading text-2xl font-semibold italic leading-none tracking-tight text-foreground md:block">
               Cortex
             </span>
           </Link>
@@ -135,7 +140,7 @@ const Header = ({ onMenuClick }) => {
             <div className="flex items-center gap-2">
               <Link
                 to="/register"
-                className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
               >
                 Register
               </Link>

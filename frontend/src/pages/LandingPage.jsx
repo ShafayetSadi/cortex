@@ -3,6 +3,7 @@ import {
   ArrowRight,
   BookOpen,
   Brain,
+  ChevronDown,
   FileText,
   Lock,
   MessageSquareText,
@@ -12,7 +13,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 
@@ -21,19 +22,40 @@ const fadeUp = {
   visible: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: {
-      duration: 0.7,
-      delay: i * 0.1,
-      ease: [0.16, 1, 0.3, 1],
-    },
+    transition: { duration: 0.7, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] },
   }),
 };
 
 const stagger = {
   hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.08, delayChildren: 0.2 },
-  },
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
+};
+
+const ScrollIndicator = () => {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const handler = () => setVisible(window.scrollY < 80);
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
+  return (
+    <motion.div
+      animate={{ opacity: visible ? 1 : 0 }}
+      transition={{ duration: 0.4 }}
+      className="pointer-events-none absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5"
+    >
+      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        Scroll
+      </span>
+      <motion.div
+        animate={{ y: [0, 5, 0] }}
+        transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+      >
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+      </motion.div>
+    </motion.div>
+  );
 };
 
 const FloatingShape = ({ className, delay = 0 }) => (
@@ -46,33 +68,24 @@ const FloatingShape = ({ className, delay = 0 }) => (
 );
 
 const FeatureCard = ({ icon: Icon, title, description, index }) => (
-  <motion.div
-    variants={fadeUp}
-    custom={index}
-    className="group relative"
-  >
+  <motion.div variants={fadeUp} custom={index} className="group relative overflow-hidden">
+    <span className="pointer-events-none absolute right-4 top-1 select-none font-heading text-8xl font-bold leading-none text-foreground/[0.04] transition-all duration-500 group-hover:text-primary/[0.07] group-hover:scale-110">
+      {String(index + 1).padStart(2, "0")}
+    </span>
     <div className="absolute -inset-px rounded-sm bg-gradient-to-b from-primary/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
     <div className="relative h-full rounded-sm border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg">
       <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10 text-primary">
         <Icon className="h-5 w-5" />
       </div>
-      <h3 className="font-heading text-xl font-semibold text-foreground mb-2">
-        {title}
-      </h3>
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        {description}
-      </p>
+      <h3 className="font-heading text-xl font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
     </div>
   </motion.div>
 );
 
 const StatItem = ({ value, label, index }) => (
-  <motion.div
-    variants={fadeUp}
-    custom={index}
-    className="text-center"
-  >
-    <div className="font-heading text-4xl font-bold text-primary md:text-5xl">
+  <motion.div variants={fadeUp} custom={index} className="group text-center">
+    <div className="font-heading text-4xl font-bold text-primary transition-transform duration-300 group-hover:scale-110 md:text-5xl">
       {value}
     </div>
     <div className="mt-1 font-mono text-xs uppercase tracking-widest text-muted-foreground">
@@ -131,7 +144,7 @@ const LandingPage = () => {
 
   return (
     <div className="relative overflow-hidden">
-      {/* Decorative elements */}
+      {/* Global decorative blobs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <FloatingShape
           delay={0.2}
@@ -147,13 +160,28 @@ const LandingPage = () => {
         />
       </div>
 
-      {/* ─── Hero Section ──────────────────────────────────────────────── */}
-      <section ref={heroRef} className="relative min-h-[90vh] pt-8 md:pt-16">
-        <motion.div
-          style={{ y: heroY, opacity: heroOpacity }}
-          className="relative"
-        >
-          {/* Decorative line accents */}
+      {/* ─── Hero ──────────────────────────────────────────────────────── */}
+      {/*
+        min-h-[calc(100vh-5.5rem)] accounts for:
+          - navbar h-14 (3.5rem = 56px)
+          - layout main pt-8 (2rem = 32px)
+        so the section fills exactly the remaining visible viewport.
+      */}
+      <section
+        ref={heroRef}
+        className="relative flex min-h-[calc(100vh-5.5rem)] flex-col justify-center py-12 pb-28"
+      >
+        {/* Subtle dot grid */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1.5px 1.5px, currentColor 1px, transparent 0)`,
+            backgroundSize: "36px 36px",
+          }}
+        />
+
+        <motion.div style={{ y: heroY, opacity: heroOpacity }} className="relative">
+          {/* Decorative line accent */}
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
@@ -162,13 +190,21 @@ const LandingPage = () => {
           />
 
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
-            {/* Left column - Text */}
+            {/* Left column */}
             <motion.div
               initial="hidden"
               animate="visible"
               variants={stagger}
               className="flex flex-col justify-center"
             >
+              {/* Pill badge */}
+              <motion.div variants={fadeUp} className="mb-5">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/8 px-3 py-1 font-mono text-xs font-medium text-primary">
+                  <Sparkles className="h-3 w-3" />
+                  RAG-Powered Knowledge Base
+                </span>
+              </motion.div>
+
               <motion.div variants={fadeUp} className="mb-4 flex items-center gap-3">
                 <div className="h-px w-10 bg-primary" />
                 <span className="font-mono text-xs font-medium uppercase tracking-[0.2em] text-primary">
@@ -201,9 +237,11 @@ const LandingPage = () => {
                 custom={2}
                 className="mt-6 max-w-lg text-base leading-relaxed text-muted-foreground md:text-lg"
               >
-                Cortex transforms your document library into an intelligent knowledge base.
-                Ask questions in plain language and get AI-generated answers grounded in{" "}
-                <em className="text-foreground">your</em> documents — not the open internet.
+                Cortex transforms your document library into an intelligent
+                knowledge base. Ask questions in plain language and get
+                AI-generated answers grounded in{" "}
+                <em className="text-foreground">your</em> documents — not the
+                open internet.
               </motion.p>
 
               <motion.div
@@ -223,9 +261,62 @@ const LandingPage = () => {
                   </Button>
                 </Link>
               </motion.div>
+
+              {/* Trust chips */}
+              <motion.div
+                variants={fadeUp}
+                custom={4}
+                className="mt-6 flex flex-wrap gap-2"
+              >
+                {[
+                  { icon: Lock, label: "Data stays in your workspace" },
+                  { icon: Shield, label: "Role-based access control" },
+                  { icon: Zap, label: "Sub-2s response times" },
+                ].map(({ icon: Icon, label }) => (
+                  <span
+                    key={label}
+                    className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-muted/50 px-2.5 py-1 font-mono text-[11px] text-muted-foreground"
+                  >
+                    <Icon className="h-3 w-3 text-primary/70" />
+                    {label}
+                  </span>
+                ))}
+              </motion.div>
+
+              {/* Mobile hero visual */}
+              <motion.div
+                variants={fadeUp}
+                custom={5}
+                className="mt-8 rounded-sm border border-border bg-card p-4 shadow-xl shadow-primary/5 lg:hidden"
+              >
+                <div className="mb-3 flex items-center gap-2 text-muted-foreground">
+                  <Search className="h-3.5 w-3.5" />
+                  <span className="font-mono text-xs">Ask anything...</span>
+                </div>
+                <div className="rounded-sm border border-border bg-background px-3 py-2.5 text-sm text-foreground">
+                  What are our Q3 revenue projections?
+                </div>
+                <div className="mt-3 flex items-start gap-2">
+                  <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Based on the{" "}
+                    <strong className="text-foreground">Q3 Financial Planning</strong>{" "}
+                    document, projected revenue is{" "}
+                    <strong className="text-primary">$4.2M</strong> — a 23%
+                    increase from Q2...
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-muted px-2.5 py-1 font-mono text-xs">
+                    <BookOpen className="h-3 w-3" />
+                    Q3-Financial-Plan.pdf
+                    <span className="text-primary">94%</span>
+                  </span>
+                </div>
+              </motion.div>
             </motion.div>
 
-            {/* Right column - Visual */}
+            {/* Right column — desktop only */}
             <motion.div
               initial={{ opacity: 0, x: 40, rotateY: -8 }}
               animate={{ opacity: 1, x: 0, rotateY: 0 }}
@@ -246,7 +337,6 @@ const LandingPage = () => {
                       What are our Q3 revenue projections?
                     </p>
                   </div>
-
                   <div className="mt-6 space-y-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
@@ -256,8 +346,8 @@ const LandingPage = () => {
                     </div>
                     <p className="text-sm leading-relaxed text-foreground">
                       Based on the Q3 Financial Planning document, the projected
-                      revenue for Q3 2024 is <strong>$4.2M</strong>, representing
-                      a 23% increase from Q2...
+                      revenue for Q3 2024 is <strong>$4.2M</strong>,
+                      representing a 23% increase from Q2...
                     </p>
                     <div className="flex gap-2 pt-2">
                       <span className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-muted px-2.5 py-1 font-mono text-xs">
@@ -281,12 +371,8 @@ const LandingPage = () => {
                       <Lock className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-foreground">
-                        Secure & Private
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Your data stays yours
-                      </p>
+                      <p className="text-xs font-semibold text-foreground">Secure & Private</p>
+                      <p className="text-xs text-muted-foreground">Your data stays yours</p>
                     </div>
                   </div>
                 </motion.div>
@@ -309,6 +395,8 @@ const LandingPage = () => {
             </motion.div>
           </div>
         </motion.div>
+
+        <ScrollIndicator />
       </section>
 
       {/* ─── Features Section ──────────────────────────────────────────── */}
@@ -408,9 +496,7 @@ const LandingPage = () => {
                   <h3 className="font-heading text-xl font-semibold text-foreground">
                     {item.title}
                   </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {item.description}
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                 </div>
               </motion.div>
             ))}
@@ -446,7 +532,6 @@ const LandingPage = () => {
           variants={fadeUp}
           className="relative overflow-hidden rounded-sm border border-border bg-gradient-to-br from-primary/5 via-card to-accent/5 p-12 text-center md:p-16"
         >
-          {/* Background pattern */}
           <div className="pointer-events-none absolute inset-0 opacity-30">
             <div
               className="absolute inset-0"

@@ -1,5 +1,5 @@
-# ── Build stage ──────────────────────────────────────────────────────────────
-FROM node:22-alpine AS build
+# ── Deps stage ──────────────────────────────────────────────────────────────
+FROM node:22-alpine AS deps
 
 WORKDIR /app
 
@@ -7,6 +7,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+
+# ── Build stage ──────────────────────────────────────────────────────────────
+FROM deps AS build
 
 # Empty VITE_API_URL tells axios to use relative URLs (nginx proxy handles routing)
 ARG VITE_API_URL=

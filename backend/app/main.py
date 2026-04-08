@@ -46,6 +46,7 @@ def root():
 
 
 @app.get("/health")
+@app.head("/health")
 def health(db: Session = Depends(get_db)):
     try:
         db.execute(text("SELECT 1"))
