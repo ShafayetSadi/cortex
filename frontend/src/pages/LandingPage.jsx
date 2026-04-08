@@ -223,33 +223,6 @@ const LandingPage = () => {
                   </Button>
                 </Link>
               </motion.div>
-
-              <motion.div
-                variants={fadeUp}
-                custom={4}
-                className="mt-12 flex items-center gap-6 border-t border-border pt-8"
-              >
-                <div className="flex -space-x-2">
-                  {[
-                    "bg-emerald-600",
-                    "bg-amber-600",
-                    "bg-rose-600",
-                    "bg-violet-600",
-                  ].map((bg, i) => (
-                    <div
-                      key={i}
-                      className={`h-8 w-8 rounded-full border-2 border-background ${bg} flex items-center justify-center text-xs font-medium text-white`}
-                    >
-                      {["S", "M", "A", "K"][i]}
-                    </div>
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Trusted by teams building
-                  <br />
-                  <span className="text-foreground">smarter knowledge bases</span>
-                </p>
-              </motion.div>
             </motion.div>
 
             {/* Right column - Visual */}
@@ -301,7 +274,7 @@ const LandingPage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.7 }}
-                  className="absolute -bottom-8 -left-12 rounded-sm border border-border bg-card p-4 shadow-lg"
+                  className="absolute -bottom-16 -left-8 rounded-sm border border-border bg-card p-4 shadow-lg"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
@@ -323,7 +296,7 @@ const LandingPage = () => {
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.9 }}
-                  className="absolute -right-8 -top-4 rounded-sm border border-border bg-card p-4 shadow-lg"
+                  className="absolute -top-4 right-0 rounded-sm border border-border bg-card p-4 shadow-lg"
                 >
                   <div className="flex items-center gap-2">
                     <MessageSquareText className="h-4 w-4 text-accent" />

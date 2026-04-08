@@ -21,7 +21,7 @@ export function Button({ className, variant = 'default', ...props }) {
       whileTap={{ scale: 0.975 }}
       transition={{ duration: 0.12 }}
       className={cn(
-        'inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium tracking-wide',
+        'inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium tracking-wide leading-normal',
         'rounded-sm transition-all duration-150',
         'disabled:cursor-not-allowed disabled:opacity-50',
         'focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
