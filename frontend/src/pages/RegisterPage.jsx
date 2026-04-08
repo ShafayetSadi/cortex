@@ -120,8 +120,8 @@ const RegisterPage = () => {
           <span className="italic">workspace.</span>
         </h2>
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          You've been invited. Fill in the details below to activate your
-          account and start querying your organization's knowledge base.
+          You&apos;ve been invited. Fill in the details below to activate your
+          account and start querying your organization&apos;s knowledge base.
         </p>
 
         <div className="mt-10 space-y-3 border-t border-border pt-8">

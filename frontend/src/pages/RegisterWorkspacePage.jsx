@@ -60,7 +60,7 @@ const RegisterWorkspacePage = () => {
           <span className="italic">workspace.</span>
         </h2>
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          Create an isolated environment for your organization's knowledge base. Add team members and securely query your documents.
+          Create an isolated environment for your organization&apos;s knowledge base. Add team members and securely query your documents.
         </p>
 
         <div className="mt-10 space-y-3 border-t border-border pt-8">

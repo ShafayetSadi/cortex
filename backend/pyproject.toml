@@ -21,3 +21,8 @@ dependencies = [
     "uvicorn[standard]>=0.42.0",
     "psycopg2-binary>=2.9.11",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.9",
+]

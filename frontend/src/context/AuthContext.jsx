@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import api from "../api/client";
 
 const AuthContext = createContext(null);
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     setProfileImage(image);
   }, [profileImageKey]);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const { data } = await api.post("/api/auth/login", { email, password });
 
     localStorage.setItem("token", data.access_token);
@@ -54,67 +54,71 @@ export const AuthProvider = ({ children }) => {
     setUser(me.data);
     const ws = await api.get("/api/workspaces/me");
     setWorkspace(ws.data);
-  };
+  }, []);
 
-  const register = async ({ name, email, password, invite_token }) => {
-    const { data } = await api.post("/api/auth/register", {
-      name,
-      email,
-      password,
-      invite_token,
-    });
+  const register = useCallback(
+    async ({ name, email, password, invite_token }) => {
+      const { data } = await api.post("/api/auth/register", {
+        name,
+        email,
+        password,
+        invite_token,
+      });
 
-    localStorage.setItem("token", data.access_token);
-    setToken(data.access_token);
+      localStorage.setItem("token", data.access_token);
+      setToken(data.access_token);
 
-    const me = await api.get("/api/users/me");
-    setUser(me.data);
-    const ws = await api.get("/api/workspaces/me");
-    setWorkspace(ws.data);
-  };
+      const me = await api.get("/api/users/me");
+      setUser(me.data);
+      const ws = await api.get("/api/workspaces/me");
+      setWorkspace(ws.data);
+    },
+    [],
+  );
 
-  const registerWorkspace = async ({
-    workspace_name,
-    admin_name,
-    admin_email,
-    password,
-  }) => {
-    const { data } = await api.post("/api/auth/register-workspace", {
-      workspace_name,
-      admin_name,
-      admin_email,
-      password,
-    });
+  const registerWorkspace = useCallback(
+    async ({ workspace_name, admin_name, admin_email, password }) => {
+      const { data } = await api.post("/api/auth/register-workspace", {
+        workspace_name,
+        admin_name,
+        admin_email,
+        password,
+      });
 
-    localStorage.setItem("token", data.access_token);
-    setToken(data.access_token);
+      localStorage.setItem("token", data.access_token);
+      setToken(data.access_token);
 
-    const me = await api.get("/api/users/me");
-    setUser(me.data);
-    const ws = await api.get("/api/workspaces/me");
-    setWorkspace(ws.data);
-  };
+      const me = await api.get("/api/users/me");
+      setUser(me.data);
+      const ws = await api.get("/api/workspaces/me");
+      setWorkspace(ws.data);
+    },
+    [],
+  );
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
     setWorkspace(null);
     setProfileImage(null);
-  };
+  }, []);
 
-  const updateProfileImage = (imageData) => {
-    if (!profileImageKey) return;
+  const updateProfileImage = useCallback(
+    (imageData) => {
+      if (!profileImageKey) return;
 
-    if (!imageData) {
-      localStorage.removeItem(profileImageKey);
-      setProfileImage(null);
-      return;
-    }
+      if (!imageData) {
+        localStorage.removeItem(profileImageKey);
+        setProfileImage(null);
+        return;
+      }
 
-    localStorage.setItem(profileImageKey, imageData);
-    setProfileImage(imageData);
-  };
+      localStorage.setItem(profileImageKey, imageData);
+      setProfileImage(imageData);
+    },
+    [profileImageKey],
+  );
 
   const value = useMemo(
     () => ({
@@ -129,7 +133,18 @@ export const AuthProvider = ({ children }) => {
       profileImage,
       updateProfileImage,
     }),
-    [user, workspace, token, loading, profileImage],
+    [
+      user,
+      workspace,
+      token,
+      loading,
+      login,
+      register,
+      registerWorkspace,
+      logout,
+      profileImage,
+      updateProfileImage,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

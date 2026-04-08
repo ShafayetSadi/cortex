@@ -217,7 +217,7 @@ const LandingPage = () => {
                 custom={1}
                 className="font-heading text-5xl font-bold leading-[1.05] text-foreground md:text-6xl lg:text-7xl"
               >
-                Your company's
+                Your company&apos;s
                 <br />
                 <span className="relative inline-block">
                   <span className="relative z-10 italic text-primary">knowledge</span>

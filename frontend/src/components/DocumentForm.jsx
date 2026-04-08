@@ -1,5 +1,5 @@
 import { FileUp, Upload, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
@@ -12,15 +12,9 @@ const DocumentForm = ({
   loading = false,
   error = '',
 }) => {
-  const [title, setTitle] = useState('')
+  const [title, setTitle] = useState(defaultValues?.title ?? '')
   const [file, setFile] = useState(null)
   const fileInputRef = useRef(null)
-
-  useEffect(() => {
-    setTitle(defaultValues?.title ?? '')
-    setFile(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [defaultValues])
 
   const submit = (event) => {
     event.preventDefault()

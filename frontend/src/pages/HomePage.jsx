@@ -27,7 +27,7 @@ const fadeUp = {
   },
 };
 
-const DocumentCard = ({ doc, index }) => (
+const DocumentCard = ({ doc }) => (
   <motion.div variants={fadeUp}>
     <Link to={`/documents/${doc.id}`} className="group block h-full">
       <article className="h-full rounded-sm border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">

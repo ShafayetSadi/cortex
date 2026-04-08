@@ -108,6 +108,7 @@ const AdminDashboard = () => {
 
       {/* Upload / Edit form */}
       <DocumentForm
+        key={editingId ?? 'new'}
         onSubmit={saveDocument}
         defaultValues={selected}
         onCancel={() => setEditingId(null)}

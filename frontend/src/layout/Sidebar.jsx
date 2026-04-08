@@ -77,9 +77,8 @@ const Sidebar = ({ open, onClose }) => {
             </p>
           </div>
 
-          {/* Nav groups */}
           <nav className="flex flex-col gap-5">
-            {groups.map((group, gi) => (
+            {groups.map((group) => (
               <div key={group.title}>
                 <p className="mb-1.5 px-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   {group.title}

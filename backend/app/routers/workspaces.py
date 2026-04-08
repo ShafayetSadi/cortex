@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.deps import get_current_user, require_admin
-from app.models.document import Document
 from app.models.invite_token import InviteToken
 from app.models.user import User
 from app.models.workspace import Workspace
