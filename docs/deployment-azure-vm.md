@@ -219,24 +219,21 @@ Copy the output and paste it as your `JWT_SECRET_KEY` value.
 
 ### Verify Nginx Configuration
 
-The nginx configuration should already be set for HTTP-only access:
-
-```bash
-cat nginx/nginx.conf
-```
-
-Should show:
+The production nginx configuration is in `nginx/nginx.conf`. For HTTP-only deployment (no SSL yet), it should contain:
 
 ```nginx
 events { worker_connections 1024; }
 
 http {
+    resolver 127.0.0.11 valid=10s;
+
     server {
         listen 80;
         server_name _;
 
         location / {
-            proxy_pass http://frontend:80;
+            set $frontend frontend;
+            proxy_pass http://$frontend:80;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -246,8 +243,6 @@ http {
 }
 ```
 
-✅ This configuration accepts connections on any IP address (perfect for testing with VM IP)
-
 ---
 
 ## Deploy the Application
@@ -256,14 +251,14 @@ http {
 
 ```bash
 cd ~/cortex
-docker compose up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### Verify Deployment
 
 ```bash
 # Check all containers are running
-docker compose ps
+docker compose -f docker-compose.prod.yml ps
 
 # Should see all services as "Up":
 # - nginx
@@ -275,7 +270,7 @@ docker compose ps
 **Check logs if any service is down:**
 
 ```bash
-docker compose logs -f
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
 ### Access Your Application
@@ -349,8 +344,8 @@ jobs:
           script: |
             cd ~/cortex
             git pull origin main
-            docker compose down
-            docker compose up -d --build
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### Test CI/CD
@@ -469,15 +464,15 @@ http {
 
 **Important**: Replace `yourdomain.com` with your actual domain in 3 places.
 
-### Step 6: Update docker-compose.yml
+### Step 6: Verify docker-compose.prod.yml
 
-Add the SSL certificates volume:
+The production compose file already includes the SSL certificates volume:
 
 ```bash
-nano ~/cortex/docker-compose.yml
+cat ~/cortex/docker-compose.prod.yml
 ```
 
-Update the nginx service:
+Should show the nginx service with:
 
 ```yaml
 services:
@@ -488,7 +483,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - /etc/letsencrypt:/etc/letsencrypt:ro # Add this line
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
     restart: unless-stopped
@@ -511,7 +506,7 @@ CORS_ORIGINS=https://yourdomain.com
 ### Step 8: Restart Services
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### Step 9: Verify HTTPS
@@ -536,7 +531,7 @@ To manually renew when needed:
 
 ```bash
 sudo certbot renew
-docker compose restart nginx
+docker compose -f docker-compose.prod.yml restart nginx
 ```
 
 ### Troubleshooting SSL
@@ -574,22 +569,22 @@ az vm show -d -g cortex-rg -n cortex-vm
 
 ```bash
 # All services
-docker compose logs -f
+docker compose -f docker-compose.prod.yml logs -f
 
 # Specific service
-docker compose logs -f backend
-docker compose logs -f frontend
-docker compose logs -f db
+docker compose -f docker-compose.prod.yml logs -f backend
+docker compose -f docker-compose.prod.yml logs -f frontend
+docker compose -f docker-compose.prod.yml logs -f db
 ```
 
 ### Restart Services
 
 ```bash
 # Restart all
-docker compose restart
+docker compose -f docker-compose.prod.yml restart
 
 # Restart specific service
-docker compose restart backend
+docker compose -f docker-compose.prod.yml restart backend
 ```
 
 ### Update Application
@@ -597,18 +592,18 @@ docker compose restart backend
 ```bash
 cd ~/cortex
 git pull origin main
-docker compose down
-docker compose up -d --build
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### Database Backup
 
 ```bash
 # Backup
-docker compose exec db pg_dump -U cortex cortex > backup_$(date +%Y%m%d).sql
+docker compose -f docker-compose.prod.yml exec db pg_dump -U cortex cortex > backup_$(date +%Y%m%d).sql
 
 # Restore
-cat backup_20240101.sql | docker compose exec -T db psql -U cortex cortex
+cat backup_20240101.sql | docker compose -f docker-compose.prod.yml exec -T db psql -U cortex cortex
 ```
 
 ### Renew SSL Certificate (if using SSL)
@@ -617,7 +612,7 @@ Certificates auto-renew, but to force renewal:
 
 ```bash
 sudo certbot renew
-docker compose restart nginx
+docker compose -f docker-compose.prod.yml restart nginx
 ```
 
 ### Monitor Disk Space
@@ -708,7 +703,7 @@ sudo lsof -i :443
 
 1. **Restrict SSH Access**: In Azure NSG, limit port 22 to your IP only
 2. **Use SSH Keys**: More secure than passwords
-3. **Change Default DB Password**: Update `POSTGRES_PASSWORD` in docker-compose.yml
+3. **Change Default DB Password**: Update `POSTGRES_PASSWORD` in docker-compose.prod.yml
 4. **Enable Firewall**:
    ```bash
    sudo ufw allow 80/tcp
@@ -769,15 +764,15 @@ sudo lsof -i :443
 
 ## Quick Reference
 
-| Task              | Command                                                        |
-| ----------------- | -------------------------------------------------------------- |
-| Start services    | `docker compose up -d`                                         |
-| Stop services     | `docker compose down`                                          |
-| Rebuild and start | `docker compose up -d --build`                                 |
-| View logs         | `docker compose logs -f`                                       |
-| Check status      | `docker compose ps`                                            |
-| Restart service   | `docker compose restart <service>`                             |
-| Enter container   | `docker compose exec <service> sh`                             |
-| Database backup   | `docker compose exec db pg_dump -U cortex cortex > backup.sql` |
-| Renew SSL         | `sudo certbot renew`                                           |
-| Update code       | `git pull && docker compose up -d --build`                     |
+| Task              | Command                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| Start services    | `docker compose -f docker-compose.prod.yml up -d`                                  |
+| Stop services     | `docker compose -f docker-compose.prod.yml down`                                   |
+| Rebuild and start | `docker compose -f docker-compose.prod.yml up -d --build`                          |
+| View logs         | `docker compose -f docker-compose.prod.yml logs -f`                                |
+| Check status      | `docker compose -f docker-compose.prod.yml ps`                                     |
+| Restart service   | `docker compose -f docker-compose.prod.yml restart <service>`                      |
+| Enter container   | `docker compose -f docker-compose.prod.yml exec <service> sh`                      |
+| Database backup   | `docker compose -f docker-compose.prod.yml exec db pg_dump -U cortex cortex > backup.sql` |
+| Renew SSL         | `sudo certbot renew`                                                               |
+| Update code       | `git pull && docker compose -f docker-compose.prod.yml up -d --build`              |
