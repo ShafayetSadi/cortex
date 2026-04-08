@@ -3,6 +3,7 @@
 This guide walks you through deploying Cortex on an Azure Ubuntu VM with Docker and CI/CD via GitHub Actions.
 
 **Two deployment paths:**
+
 - **Quick Start**: HTTP-only deployment (no domain needed) - recommended to start
 - **Production**: Add SSL certificate and custom domain
 
@@ -11,6 +12,7 @@ This guide walks you through deploying Cortex on an Azure Ubuntu VM with Docker 
 ## Table of Contents
 
 ### Quick Start (HTTP Only)
+
 1. [Prerequisites](#prerequisites)
 2. [Create Azure VM](#create-azure-vm)
 3. [Configure Networking](#configure-networking)
@@ -22,9 +24,11 @@ This guide walks you through deploying Cortex on an Azure Ubuntu VM with Docker 
 9. [Set Up CI/CD](#set-up-cicd)
 
 ### Production Setup
+
 10. [Adding SSL and Custom Domain](#adding-ssl-and-custom-domain)
 
 ### Operations
+
 11. [Maintenance](#maintenance)
 12. [Troubleshooting](#troubleshooting)
 
@@ -313,11 +317,11 @@ Go to your GitHub repository → **Settings** → **Secrets and variables** → 
 
 Add these secrets:
 
-| Secret Name   | Value                        |
-| ------------- | ---------------------------- |
+| Secret Name   | Value                         |
+| ------------- | ----------------------------- |
 | `VM_HOST`     | Your VM's public IP or domain |
-| `VM_USER`     | `azureuser`                  |
-| `VM_PASSWORD` | Your VM password             |
+| `VM_USER`     | `azureuser`                   |
+| `VM_PASSWORD` | Your VM password              |
 
 ### Workflow File
 
@@ -372,9 +376,9 @@ Once you have a domain name and want to enable HTTPS, follow these steps.
 
 Add an **A record** in your DNS provider:
 
-| Type | Host | Value | TTL |
-|------|------|-------|-----|
-| A | `@` or `cortex` | Your VM's Public IP | 300 |
+| Type | Host            | Value               | TTL |
+| ---- | --------------- | ------------------- | --- |
+| A    | `@` or `cortex` | Your VM's Public IP | 300 |
 
 Wait a few minutes for DNS propagation. Verify with:
 
@@ -484,7 +488,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - /etc/letsencrypt:/etc/letsencrypt:ro  # Add this line
+      - /etc/letsencrypt:/etc/letsencrypt:ro # Add this line
     depends_on:
       - frontend
     restart: unless-stopped
@@ -538,12 +542,14 @@ docker compose restart nginx
 ### Troubleshooting SSL
 
 **Certificate not found:**
+
 ```bash
 # Check certificate exists
 sudo ls /etc/letsencrypt/live/yourdomain.com/
 ```
 
 **DNS not resolving:**
+
 ```bash
 # Test DNS
 nslookup yourdomain.com
@@ -552,6 +558,7 @@ nslookup yourdomain.com
 ```
 
 **Port 80/443 not accessible:**
+
 ```bash
 # Check Azure NSG rules
 az vm show -d -g cortex-rg -n cortex-vm
@@ -762,15 +769,15 @@ sudo lsof -i :443
 
 ## Quick Reference
 
-| Task                    | Command                                      |
-| ----------------------- | -------------------------------------------- |
-| Start services          | `docker compose up -d`                       |
-| Stop services           | `docker compose down`                        |
-| Rebuild and start       | `docker compose up -d --build`               |
-| View logs               | `docker compose logs -f`                     |
-| Check status            | `docker compose ps`                          |
-| Restart service         | `docker compose restart <service>`           |
-| Enter container         | `docker compose exec <service> sh`           |
-| Database backup         | `docker compose exec db pg_dump -U cortex cortex > backup.sql` |
-| Renew SSL               | `sudo certbot renew`                         |
-| Update code             | `git pull && docker compose up -d --build`   |
+| Task              | Command                                                        |
+| ----------------- | -------------------------------------------------------------- |
+| Start services    | `docker compose up -d`                                         |
+| Stop services     | `docker compose down`                                          |
+| Rebuild and start | `docker compose up -d --build`                                 |
+| View logs         | `docker compose logs -f`                                       |
+| Check status      | `docker compose ps`                                            |
+| Restart service   | `docker compose restart <service>`                             |
+| Enter container   | `docker compose exec <service> sh`                             |
+| Database backup   | `docker compose exec db pg_dump -U cortex cortex > backup.sql` |
+| Renew SSL         | `sudo certbot renew`                                           |
+| Update code       | `git pull && docker compose up -d --build`                     |

@@ -5,6 +5,7 @@ import Layout from "./layout/Layout";
 import AdminDashboard from "./pages/AdminDashboard";
 import DocumentDetailPage from "./pages/DocumentDetailPage";
 import HomePage from "./pages/HomePage";
+import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
@@ -19,17 +20,24 @@ const DashboardRouter = () => {
 };
 
 const App = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   return (
     <Layout>
       <Routes>
+        {/* Public landing page for non-authenticated users */}
         <Route
           path="/"
           element={
-            <ProtectedRoute>
+            loading ? (
+              <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
+                Loading...
+              </div>
+            ) : user ? (
               <HomePage />
-            </ProtectedRoute>
+            ) : (
+              <LandingPage />
+            )
           }
         />
         <Route
