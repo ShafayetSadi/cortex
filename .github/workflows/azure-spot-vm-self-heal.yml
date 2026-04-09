@@ -1,0 +1,101 @@
+name: Azure Spot VM Self-Heal
+
+on:
+  schedule:
+    # Run every 5 minutes to detect Spot VM eviction quickly.
+    - cron: "*/5 * * * *"
+  # Allow manual runs for validation and incident response.
+  workflow_dispatch:
+
+jobs:
+  health-check-and-recover:
+    name: Health Check And Recover
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # Check the public health endpoint before touching Azure.
+      # This keeps the workflow free-tier friendly by avoiding login/start calls
+      # unless the service appears unhealthy after multiple attempts.
+      - name: Check service health with retries
+        id: healthcheck
+        shell: bash
+        env:
+          HEALTH_URL: https://cortex.shafayetsadi.dev/health
+        run: |
+          set +e
+
+          echo "Checking ${HEALTH_URL}"
+          healthy=false
+
+          for attempt in 1 2 3; do
+            echo "Attempt ${attempt}/3"
+
+            http_code="$(curl -sS -o /dev/null -w '%{http_code}' \
+              --max-time 10 \
+              --connect-timeout 5 \
+              "${HEALTH_URL}")"
+            curl_exit_code=$?
+
+            if [ "${curl_exit_code}" -eq 0 ] && [ "${http_code}" = "200" ]; then
+              echo "Health endpoint returned 200."
+              healthy=true
+              break
+            fi
+
+            echo "Health check failed: curl_exit_code=${curl_exit_code}, http_code=${http_code}"
+
+            if [ "${attempt}" -lt 3 ]; then
+              sleep 10
+            fi
+          done
+
+          echo "healthy=${healthy}" >> "${GITHUB_OUTPUT}"
+
+          if [ "${healthy}" = "true" ]; then
+            echo "Service is healthy. Recovery skipped."
+          else
+            echo "Service is down or unreachable after retries."
+          fi
+
+      # Authenticate with Azure only when recovery is required.
+      # AZURE_CREDENTIALS must contain the Service Principal JSON generated with
+      # `az ad sp create-for-rbac --sdk-auth`.
+      - name: Azure login
+        if: steps.healthcheck.outputs.healthy != 'true'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Start the evicted/stopped VM only when the health endpoint failed all retries.
+      # Secrets keep the workflow generic and easy to move across repositories.
+      - name: Start Azure VM
+        if: steps.healthcheck.outputs.healthy != 'true'
+        shell: bash
+        env:
+          VM_NAME: ${{ secrets.VM_NAME }}
+          RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${VM_NAME}" ] || [ -z "${RESOURCE_GROUP}" ]; then
+            echo "VM_NAME and RESOURCE_GROUP secrets must be configured."
+            exit 1
+          fi
+
+          echo "Starting VM '${VM_NAME}' in resource group '${RESOURCE_GROUP}'..."
+          az vm start \
+            --name "${VM_NAME}" \
+            --resource-group "${RESOURCE_GROUP}"
+
+          echo "VM start command completed."
+
+      # Emit a small summary to make scheduled runs easy to scan in Actions history.
+      - name: Summarize run
+        shell: bash
+        run: |
+          if [ "${{ steps.healthcheck.outputs.healthy }}" = "true" ]; then
+            echo "Service healthy. No Azure action was needed."
+          else
+            echo "Service unhealthy. Azure login ran and VM start was attempted."
+          fi
