@@ -1,3 +1,4 @@
+from datetime import datetime
 from math import sqrt
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -5,6 +6,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session, defer, joinedload
 
 from app.core.chunking import chunk_text
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.embeddings import EmbeddingError, generate_embedding
 from app.core.pdf import PDFExtractionError, extract_text_from_pdf
@@ -110,7 +112,19 @@ async def create_document(
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
+    doc_count = db.query(Document).filter(Document.workspace_id == current_user.workspace_id).count()
+    if doc_count >= settings.max_documents_per_workspace:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Document limit reached ({settings.max_documents_per_workspace} files per workspace). Delete a document to upload more.",
+        )
+
     file_bytes = await file.read()
+    if len(file_bytes) > settings.max_file_size_mb * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File exceeds the {settings.max_file_size_mb}MB size limit.",
+        )
     try:
         content = extract_text_from_pdf(file_bytes)
     except PDFExtractionError as exc:
@@ -267,6 +281,27 @@ def ask(
 ):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
+
+    if len(request.question) > settings.max_query_length:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Question exceeds the {settings.max_query_length} character limit.",
+        )
+
+    now = datetime.utcnow()
+    if not current_user.queries_reset_at or current_user.queries_reset_at.date() < now.date():
+        current_user.queries_today = 0
+        current_user.queries_reset_at = now
+
+    if current_user.queries_today >= settings.max_queries_per_day:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily query limit reached ({settings.max_queries_per_day} queries). Try again tomorrow.",
+        )
+
+    current_user.queries_today += 1
+    db.add(current_user)
+    db.commit()
 
     question_embedding = try_generate_embedding(request.question)
     if question_embedding is None:

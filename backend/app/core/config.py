@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.openai.com/v1"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
+    # Usage limits
+    max_file_size_mb: int = 2
+    max_documents_per_workspace: int = 5
+    max_queries_per_day: int = 20
+    max_query_length: int = 1000
+    max_users_per_workspace: int = 5
+
     @property
     def parsed_cors_origins(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

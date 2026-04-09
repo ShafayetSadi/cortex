@@ -1,11 +1,15 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.deps import get_current_user, require_admin
+from app.models.document import Document
 from app.models.user import User
-from app.schemas.user import UserCreate, UserOut, UserUpdate
+from app.schemas.user import UserCreate, UserOut, UserUpdate, UsageOut
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -13,6 +17,28 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/me/usage", response_model=UsageOut)
+def get_my_usage(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    today = datetime.utcnow().date()
+    queries_used = (
+        current_user.queries_today
+        if current_user.queries_reset_at and current_user.queries_reset_at.date() == today
+        else 0
+    )
+    doc_count = db.query(Document).filter(Document.workspace_id == current_user.workspace_id).count()
+    workspace_users = db.query(User).filter(User.workspace_id == current_user.workspace_id).count()
+    return UsageOut(
+        queries_used_today=queries_used,
+        queries_limit=settings.max_queries_per_day,
+        documents_uploaded=doc_count,
+        documents_limit=settings.max_documents_per_workspace,
+        file_size_limit_mb=settings.max_file_size_mb,
+        max_query_length=settings.max_query_length,
+        workspace_users=workspace_users,
+        workspace_users_limit=settings.max_users_per_workspace,
+    )
 
 
 @router.get("/", response_model=list[UserOut], dependencies=[Depends(require_admin)])

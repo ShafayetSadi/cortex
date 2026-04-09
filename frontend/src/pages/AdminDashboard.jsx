@@ -44,11 +44,17 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true)
   const { showToast } = useToast()
 
+  const [usage, setUsage] = useState(null)
+
   const loadDocuments = async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/api/documents/')
-      setDocuments(data)
+      const [{ data: docs }, { data: usageData }] = await Promise.all([
+        api.get('/api/documents/'),
+        api.get('/api/users/me/usage'),
+      ])
+      setDocuments(docs)
+      setUsage(usageData)
     } finally {
       setLoading(false)
     }
@@ -115,6 +121,8 @@ const AdminDashboard = () => {
         submitLabel={editingId ? 'Update Document' : 'Upload Document'}
         loading={saving}
         error={error}
+        docCount={usage?.documents_uploaded ?? documents.length}
+        docLimit={usage?.documents_limit ?? 5}
       />
 
       {/* Documents table */}

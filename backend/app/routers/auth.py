@@ -3,6 +3,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
@@ -71,14 +72,22 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
             detail="This invite link is not valid for your email address.",
         )
 
-    # 3. Ensure the email isn't already taken
+    # 3. Check workspace user limit
+    user_count = db.query(User).filter(User.workspace_id == invite.workspace_id).count()
+    if user_count >= settings.max_users_per_workspace:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This workspace has reached its user limit ({settings.max_users_per_workspace} users).",
+        )
+
+    # 4. Ensure the email isn't already taken
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use."
         )
 
-    # 4. Create the user in the workspace the invite belongs to
+    # 5. Create the user in the workspace the invite belongs to
     user = User(
         name=payload.name,
         email=payload.email,
@@ -88,7 +97,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     )
     db.add(user)
 
-    # 5. Mark the invite token as consumed
+    # 6. Mark the invite token as consumed
     invite.used = True
 
     db.commit()

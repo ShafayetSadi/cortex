@@ -22,6 +22,8 @@ class User(Base):
         Integer, ForeignKey("workspaces.id"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    queries_today: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    queries_reset_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     workspace = relationship("Workspace", back_populates="users")
     documents = relationship(

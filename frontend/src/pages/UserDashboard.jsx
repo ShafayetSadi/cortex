@@ -22,13 +22,18 @@ const UserDashboard = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [usage, setUsage] = useState(null)
   const { showToast } = useToast()
 
   const loadDocuments = async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/api/documents/')
-      setDocuments(data)
+      const [{ data: docs }, { data: usageData }] = await Promise.all([
+        api.get('/api/documents/'),
+        api.get('/api/users/me/usage'),
+      ])
+      setDocuments(docs)
+      setUsage(usageData)
     } finally {
       setLoading(false)
     }
@@ -94,6 +99,8 @@ const UserDashboard = () => {
         submitLabel={editingId ? 'Update Document' : 'Upload Document'}
         loading={saving}
         error={error}
+        docCount={usage?.documents_uploaded ?? documents.length}
+        docLimit={usage?.documents_limit ?? 5}
       />
 
       {/* Document list */}
@@ -103,7 +110,7 @@ const UserDashboard = () => {
             Your Documents
           </h2>
           <span className="font-mono text-xs text-muted-foreground">
-            {documents.length} total
+            {usage ? `${usage.documents_uploaded} / ${usage.documents_limit}` : `${documents.length} total`}
           </span>
         </div>
 

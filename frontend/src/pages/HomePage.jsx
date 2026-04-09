@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import {
+  AlertCircle,
   ArrowRight,
   BookOpen,
   CalendarDays,
@@ -10,6 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { Spinner } from "../components/ui/spinner";
 
@@ -58,7 +60,10 @@ const DocumentCard = ({ doc }) => (
   </motion.div>
 );
 
+const MAX_QUERY_LENGTH = 1000;
+
 const HomePage = () => {
+  const { token } = useAuth();
   const [question, setQuestion] = useState("");
   const [threshold, setThreshold] = useState(30);
   const [topK, setTopK] = useState(5);
@@ -68,6 +73,7 @@ const HomePage = () => {
   const [documents, setDocuments] = useState([]);
   const [docsLoading, setDocsLoading] = useState(true);
   const [showSliders, setShowSliders] = useState(false);
+  const [usage, setUsage] = useState(null);
 
   useEffect(() => {
     api
@@ -76,9 +82,15 @@ const HomePage = () => {
       .finally(() => setDocsLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+    api.get("/api/users/me/usage").then(({ data }) => setUsage(data)).catch(() => {});
+  }, [token]);
+
   const handleAsk = async (e) => {
     e.preventDefault();
     if (!question.trim()) return;
+    if (question.length > MAX_QUERY_LENGTH) return;
     setAsking(true);
     setAskError("");
     setAnswer(null);
@@ -89,12 +101,25 @@ const HomePage = () => {
         top_k: topK,
       });
       setAnswer(data);
-    } catch {
-      setAskError("Unable to process your question. Please try again.");
+      // Refresh usage after a successful query
+      if (token) {
+        api.get("/api/users/me/usage").then(({ data: u }) => setUsage(u)).catch(() => {});
+      }
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      setAskError(detail ?? "Unable to process your question. Please try again.");
     } finally {
       setAsking(false);
     }
   };
+
+  const queriesUsed = usage?.queries_used_today ?? 0;
+  const queriesLimit = usage?.queries_limit ?? 20;
+  const queryPct = Math.min((queriesUsed / queriesLimit) * 100, 100);
+  const queryBarColor = queriesUsed >= queriesLimit ? "bg-red-500" : queriesUsed >= queriesLimit * 0.8 ? "bg-amber-500" : "bg-primary";
+  const atQueryLimit = queriesUsed >= queriesLimit;
+  const charCount = question.length;
+  const overCharLimit = charCount > MAX_QUERY_LENGTH;
 
   return (
     <div className="space-y-16">
@@ -131,7 +156,9 @@ const HomePage = () => {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Ask anything about your documents..."
-                className="w-full bg-transparent py-4 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                disabled={atQueryLimit}
+                maxLength={MAX_QUERY_LENGTH + 1}
+                className="w-full bg-transparent py-4 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
               />
             </div>
             <div className="flex items-center gap-1 border-l border-border pr-2">
@@ -148,12 +175,45 @@ const HomePage = () => {
               >
                 <Sliders className="h-3.5 w-3.5" />
               </button>
-              <Button type="submit" disabled={asking} className="h-9">
+              <Button type="submit" disabled={asking || atQueryLimit || overCharLimit} className="h-9">
                 {asking ? <Spinner className="h-3.5 w-3.5" /> : null}
                 {asking ? "Thinking..." : "Ask"}
               </Button>
             </div>
           </form>
+
+          {/* Query usage + char counter row */}
+          {usage && (
+            <div className="border-t border-border px-4 py-2.5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                    Queries today
+                  </span>
+                  <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${queryBarColor}`}
+                      style={{ width: `${queryPct}%` }}
+                    />
+                  </div>
+                  <span className={`shrink-0 font-mono text-xs font-medium ${atQueryLimit ? "text-red-500" : "text-foreground"}`}>
+                    {queriesUsed}/{queriesLimit}
+                  </span>
+                </div>
+                {charCount > 0 && (
+                  <span className={`shrink-0 font-mono text-xs ${overCharLimit ? "text-red-500" : charCount > MAX_QUERY_LENGTH * 0.9 ? "text-amber-500" : "text-muted-foreground"}`}>
+                    {charCount}/{MAX_QUERY_LENGTH}
+                  </span>
+                )}
+              </div>
+              {atQueryLimit && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-500">
+                  <AlertCircle className="h-3 w-3" />
+                  Daily limit reached. Queries reset at midnight UTC.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Sliders panel */}
           {showSliders && (

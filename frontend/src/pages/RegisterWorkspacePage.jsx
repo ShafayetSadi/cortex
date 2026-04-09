@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Building2, LockKeyhole, Mail, UserRound } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -9,18 +9,20 @@ import { useAuth } from '../context/AuthContext'
 const RegisterWorkspacePage = () => {
   const { registerWorkspace } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ workspaceName: '', adminName: '', adminEmail: '', password: '', confirmPassword: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
+  const workspaceNameRef = useRef(null)
+  const adminNameRef = useRef(null)
+  const adminEmailRef = useRef(null)
+  const passwordRef = useRef(null)
+  const confirmPasswordRef = useRef(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (form.password !== form.confirmPassword) {
+    const password = passwordRef.current?.value ?? ''
+    const confirmPassword = confirmPasswordRef.current?.value ?? ''
+    if (password !== confirmPassword) {
       setError('Passwords do not match.')
       return
     }
@@ -28,10 +30,10 @@ const RegisterWorkspacePage = () => {
     setError('')
     try {
       await registerWorkspace({
-        workspace_name: form.workspaceName,
-        admin_name: form.adminName,
-        admin_email: form.adminEmail,
-        password: form.password
+        workspace_name: workspaceNameRef.current?.value ?? '',
+        admin_name: adminNameRef.current?.value ?? '',
+        admin_email: adminEmailRef.current?.value ?? '',
+        password,
       })
       navigate('/dashboard')
     } catch (err) {
@@ -89,7 +91,7 @@ const RegisterWorkspacePage = () => {
             </label>
             <div className="relative">
               <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" name="workspaceName" value={form.workspaceName} onChange={handleChange} placeholder="Acme Corp" required />
+              <Input ref={workspaceNameRef} className="pl-9" name="workspaceName" placeholder="Acme Corp" required />
             </div>
           </div>
 
@@ -99,7 +101,7 @@ const RegisterWorkspacePage = () => {
             </label>
             <div className="relative">
               <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" name="adminName" value={form.adminName} onChange={handleChange} placeholder="Your name" required />
+              <Input ref={adminNameRef} className="pl-9" name="adminName" placeholder="Your name" required />
             </div>
           </div>
 
@@ -109,7 +111,7 @@ const RegisterWorkspacePage = () => {
             </label>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" type="email" name="adminEmail" value={form.adminEmail} onChange={handleChange} placeholder="admin@example.com" required />
+              <Input ref={adminEmailRef} className="pl-9" type="email" name="adminEmail" placeholder="admin@example.com" required />
             </div>
           </div>
 
@@ -119,7 +121,7 @@ const RegisterWorkspacePage = () => {
             </label>
             <div className="relative">
               <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" type="password" name="password" value={form.password} onChange={handleChange} placeholder="Min. 6 characters" minLength={6} required />
+              <Input ref={passwordRef} className="pl-9" type="password" name="password" placeholder="Min. 6 characters" minLength={6} required />
             </div>
           </div>
 
@@ -129,7 +131,15 @@ const RegisterWorkspacePage = () => {
             </label>
             <div className="relative">
               <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} placeholder="Repeat password" minLength={6} required />
+              <Input
+                ref={confirmPasswordRef}
+                className="pl-9"
+                type="password"
+                name="confirmPassword"
+                placeholder="Repeat password"
+                minLength={6}
+                required
+              />
             </div>
           </div>
 
