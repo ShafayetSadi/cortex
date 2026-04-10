@@ -1,6 +1,12 @@
 # Deploying Cortex on Azure Ubuntu VM
 
-This guide walks you through deploying Cortex on an Azure Ubuntu VM with Docker and CI/CD via GitHub Actions.
+This guide walks you through deploying Cortex on an Azure Ubuntu VM with Docker
+and CI/CD via GitHub Actions.
+
+This repo has two compose entrypoints:
+
+- `docker compose up --build` for local development
+- `docker compose -f docker-compose.prod.yml up -d --build` for VM/production deployment
 
 **Two deployment paths:**
 
@@ -344,7 +350,6 @@ jobs:
           script: |
             cd ~/cortex
             git pull origin main
-            docker compose -f docker-compose.prod.yml down
             docker compose -f docker-compose.prod.yml up -d --build
 ```
 
@@ -592,7 +597,6 @@ docker compose -f docker-compose.prod.yml restart backend
 ```bash
 cd ~/cortex
 git pull origin main
-docker compose -f docker-compose.prod.yml down
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
@@ -766,9 +770,9 @@ sudo lsof -i :443
 
 | Task              | Command                                                                            |
 | ----------------- | ---------------------------------------------------------------------------------- |
-| Start services    | `docker compose -f docker-compose.prod.yml up -d`                                  |
-| Stop services     | `docker compose -f docker-compose.prod.yml down`                                   |
-| Rebuild and start | `docker compose -f docker-compose.prod.yml up -d --build`                          |
+| Dev stack         | `docker compose up --build`                                                        |
+| Production stack  | `docker compose -f docker-compose.prod.yml up -d --build`                          |
+| Stop production   | `docker compose -f docker-compose.prod.yml down`                                   |
 | View logs         | `docker compose -f docker-compose.prod.yml logs -f`                                |
 | Check status      | `docker compose -f docker-compose.prod.yml ps`                                     |
 | Restart service   | `docker compose -f docker-compose.prod.yml restart <service>`                      |

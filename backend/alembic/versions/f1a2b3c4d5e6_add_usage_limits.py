@@ -20,21 +20,23 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "users",
-        sa.Column("queries_today", sa.Integer(), nullable=False, server_default="0"),
-    )
-    op.add_column(
-        "users",
-        sa.Column(
-            "queries_reset_at",
-            sa.DateTime(),
-            nullable=False,
-            server_default=sa.text("CURRENT_TIMESTAMP"),
-        ),
-    )
+    # Use batch mode so SQLite can apply the non-constant timestamp default by
+    # recreating the table instead of issuing an unsupported ALTER TABLE.
+    with op.batch_alter_table("users") as batch_op:
+        batch_op.add_column(
+            sa.Column("queries_today", sa.Integer(), nullable=False, server_default="0")
+        )
+        batch_op.add_column(
+            sa.Column(
+                "queries_reset_at",
+                sa.DateTime(),
+                nullable=False,
+                server_default=sa.text("CURRENT_TIMESTAMP"),
+            )
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("users", "queries_reset_at")
-    op.drop_column("users", "queries_today")
+    with op.batch_alter_table("users") as batch_op:
+        batch_op.drop_column("queries_reset_at")
+        batch_op.drop_column("queries_today")

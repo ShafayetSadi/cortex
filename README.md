@@ -32,8 +32,10 @@ roles. One deployment of Cortex can serve many organizations simultaneously.
 
 ```text
 .
-├── backend/    # FastAPI API — workspaces, auth, document management, RAG pipeline
-└── frontend/   # React + Vite client — workspace UI, dashboards, Q&A interface
+├── backend/              # FastAPI API — workspaces, auth, document management, RAG pipeline
+├── frontend/             # React + Vite client — workspace UI, dashboards, Q&A interface
+├── docker-compose.yml    # Development stack
+└── docker-compose.prod.yml # Production stack behind nginx
 ```
 
 Backend-specific details: [backend/README.md](backend/README.md)
@@ -96,6 +98,7 @@ uv run python main.py
 ```
 
 API runs at `http://localhost:8000`. Docs at `http://localhost:8000/docs`.
+This backend-only path uses SQLite by default and does not require Postgres.
 
 **Environment variables:**
 
@@ -109,6 +112,7 @@ GITHUB_TOKEN=
 ```
 
 - `JWT_SECRET_KEY` — required, minimum 32 characters.
+- `DATABASE_URL` — defaults to local SQLite for backend-only development.
 - `CORS_ORIGINS` — comma-separated list of allowed frontend origins.
 - `EMBEDDINGS_API_KEY` — API key for the embeddings provider used in the RAG pipeline.
 
@@ -133,6 +137,29 @@ Frontend runs at `http://localhost:5173`.
 ```env
 VITE_API_URL=http://localhost:8000
 ```
+
+### Docker
+
+For the full local stack:
+
+```bash
+cp backend/.env.example backend/.env
+docker compose up --build
+```
+
+This starts PostgreSQL, the FastAPI backend, and the Vite frontend.
+The frontend is available at `http://localhost:3000` and the backend at
+`http://localhost:8000`.
+
+For production-style deployment behind nginx:
+
+```bash
+cp backend/.env.example backend/.env
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+This starts nginx, frontend, backend, and PostgreSQL, and serves the app on
+`http://localhost` (or your VM/domain in deployment).
 
 ---
 
@@ -159,7 +186,7 @@ VITE_API_URL=http://localhost:8000
 - [ ] Streaming answers — stream tokens as the LLM generates them
 - [ ] Answer feedback — thumbs up/down to improve retrieval quality over time
 - [ ] Webhook / API access — query a workspace programmatically
-- [ ] Docker Compose — one-command self-hosted deployment
+- [x] Docker Compose — development and production compose flows
 
 ---
 

@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "supersecretkey"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-    database_url: str = "postgresql://cortex:cortex@localhost:5432/cortex"
+    database_url: str = "sqlite:///./app.db"
     embeddings_api_key: str = ""
     embeddings_model: str = "text-embedding-3-small"
     embeddings_base_url: str = "https://models.inference.ai.azure.com"

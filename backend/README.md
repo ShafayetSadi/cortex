@@ -46,6 +46,20 @@ cd backend
 
 The API listens on `http://localhost:8000` by default.
 
+For the full local stack from the repo root:
+
+```bash
+cp backend/.env.example backend/.env
+docker compose up --build
+```
+
+For the production-style stack with nginx in front:
+
+```bash
+cp backend/.env.example backend/.env
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
 Create an admin explicitly when needed:
 
 ```bash
@@ -65,7 +79,9 @@ GITHUB_TOKEN=
 
 Notes:
 
+- The default backend-only development path uses SQLite and should start without a separate database server.
 - `CORS_ORIGINS` accepts a comma-separated list or a JSON array.
+- In Docker development, the frontend is exposed at `http://localhost:3000`.
 - Admin creation is explicit through the `create-admin` command.
 
 ## Verification

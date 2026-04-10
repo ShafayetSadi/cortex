@@ -65,7 +65,8 @@
 │   │   └── layout/              # Header, Sidebar, Footer, Layout
 │   ├── nginx.conf               # Used in Docker: serves SPA + proxies /api
 │   └── Dockerfile
-├── docker-compose.yml
+├── docker-compose.yml         # Development stack: db + backend + frontend
+├── docker-compose.prod.yml    # Production stack: nginx + db + backend + frontend
 └── docs/
 ```
 
@@ -119,8 +120,8 @@ All backend settings live in `backend/.env`. The full reference:
 | Variable            | Description                                                                                     |
 | ------------------- | ----------------------------------------------------------------------------------------------- |
 | `JWT_SECRET_KEY`    | Secret used to sign JWTs. Must be at least 32 characters. Generate with `openssl rand -hex 32`. |
-| `DATABASE_URL`      | PostgreSQL connection string. Format: `postgresql://user:password@host:5432/dbname`             |
-| `POSTGRES_PASSWORD` | Password for the `db` service in Docker Compose. Must match the password in `DATABASE_URL`.     |
+| `DATABASE_URL`      | Defaults to `sqlite:///./app.db` for backend-only development. Use a PostgreSQL URL when running against Postgres. |
+| `POSTGRES_PASSWORD` | Password for the `db` service in Docker Compose. Must match the password in the Docker/Postgres `DATABASE_URL`. |
 
 ### AI / RAG Pipeline
 
@@ -314,7 +315,8 @@ curl http://localhost:8000/health
 
 ## Docker Deployment
 
-The full stack (PostgreSQL, backend, frontend) runs with a single command:
+Use the default compose file for development. It starts PostgreSQL, the FastAPI
+backend, and the Vite frontend with live-reload-friendly settings.
 
 ```bash
 # 1. Configure the environment
@@ -322,14 +324,23 @@ cp backend/.env.example backend/.env
 # Edit backend/.env — set JWT_SECRET_KEY, POSTGRES_PASSWORD, and your AI API keys
 
 # 2. Build and start
-docker compose up --build -d
+docker compose up --build
 
 # 3. Create the first admin
 docker compose exec backend uv run python main.py create-admin \
   --name "Admin" --email admin@example.com --password yourpassword
 ```
 
-The app will be available at `http://localhost`.
+The frontend will be available at `http://localhost:3000` and the backend at
+`http://localhost:8000`.
+
+For a production-style local smoke test with nginx in front:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+That flow serves the application at `http://localhost`.
 
 ### Service layout
 
