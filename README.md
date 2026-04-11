@@ -78,11 +78,12 @@ Backend-specific details: [backend/README.md](backend/README.md)
 
 ### Access Control
 
-| Role       | Capabilities                                              |
-| ---------- | --------------------------------------------------------- |
-| **Admin**  | Manage workspace, users, roles, and all documents         |
-| **User**   | Upload and manage own documents, query the knowledge base |
-| **Public** | Browse documents and query the knowledge base (read-only) |
+| Role           | Capabilities                                                                 |
+| -------------- | ---------------------------------------------------------------------------- |
+| **Superadmin** | Platform-level access — manage all workspaces, users, and documents globally |
+| **Admin**      | Manage workspace, users, roles, and all documents within their workspace     |
+| **User**       | Upload and manage own documents, query the knowledge base                    |
+| **Public**     | Browse documents and query the knowledge base (read-only)                    |
 
 ---
 
@@ -116,10 +117,12 @@ GITHUB_TOKEN=
 - `CORS_ORIGINS` — comma-separated list of allowed frontend origins.
 - `EMBEDDINGS_API_KEY` — API key for the embeddings provider used in the RAG pipeline.
 
-**Create the first admin:**
+**Seed the superadmin** (optional — set all three to auto-create on startup):
 
-```bash
-uv run python main.py create-admin --name "Admin" --email admin@example.com --password secret
+```env
+SUPERADMIN_NAME=Super Admin
+SUPERADMIN_EMAIL=super@admin.com
+SUPERADMIN_PASSWORD=changeme
 ```
 
 ### Frontend
@@ -165,15 +168,16 @@ This starts nginx, frontend, backend, and PostgreSQL, and serves the app on
 
 ## Routes
 
-| Path             | Access | Description                        |
-| ---------------- | ------ | ---------------------------------- |
-| `/`              | Public | Homepage — Q&A and document browse |
-| `/documents/:id` | Public | Document detail view               |
-| `/login`         | Public | Sign in                            |
-| `/register`      | Public | Create account                     |
-| `/dashboard`     | Auth   | User or admin dashboard            |
-| `/profile`       | Auth   | Account profile                    |
-| `/users`         | Admin  | User management                    |
+| Path             | Access     | Description                        |
+| ---------------- | ---------- | ---------------------------------- |
+| `/`              | Public     | Homepage — Q&A and document browse |
+| `/documents/:id` | Public     | Document detail view               |
+| `/login`         | Public     | Sign in                            |
+| `/register`      | Public     | Create account                     |
+| `/dashboard`     | Auth       | User or admin dashboard            |
+| `/profile`       | Auth       | Account profile                    |
+| `/users`         | Admin      | User management                    |
+| `/superadmin`    | Superadmin | Platform-wide admin panel          |
 
 ---
 

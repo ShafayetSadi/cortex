@@ -42,18 +42,23 @@
 │   │   │   └── security.py      # JWT creation & password hashing
 │   │   ├── models/
 │   │   │   ├── user.py          # User SQLAlchemy model
-│   │   │   └── document.py      # Document SQLAlchemy model
+│   │   │   ├── document.py      # Document SQLAlchemy model
+│   │   │   ├── collection.py    # Collection SQLAlchemy model
+│   │   │   └── workspace.py     # Workspace SQLAlchemy model
 │   │   ├── routers/
 │   │   │   ├── auth.py          # POST /api/auth/login, /register
 │   │   │   ├── documents.py     # Document CRUD + public Q&A
-│   │   │   └── users.py         # User management (admin)
+│   │   │   ├── users.py         # User management (admin)
+│   │   │   ├── collections.py   # Collection CRUD (per workspace)
+│   │   │   ├── workspaces.py    # Workspace management + invites
+│   │   │   └── superadmin.py    # Platform-level admin endpoints
 │   │   ├── schemas/             # Pydantic request/response models
 │   │   ├── deps.py              # FastAPI dependencies (auth guards)
-│   │   └── main.py              # App factory, middleware, lifespan
+│   │   └── main.py              # App factory, middleware, lifespan + superadmin seed
 │   ├── alembic/
 │   │   ├── env.py               # Alembic config — pulls DATABASE_URL from settings
 │   │   └── versions/            # Migration files
-│   ├── main.py                  # Entry point: `serve` and `create-admin` commands
+│   ├── main.py                  # Entry point: `serve` command
 │   ├── pyproject.toml
 │   └── .env                     # Local secrets (not committed)
 ├── frontend/
@@ -86,14 +91,15 @@ uv run python main.py     # starts the server on http://localhost:8000
 Migrations run automatically on startup via the FastAPI lifespan hook. The
 interactive API docs are available at `http://localhost:8000/docs`.
 
-**Create the first admin user:**
+**Seed the superadmin** (set all three env vars in `.env` to auto-create on startup):
 
-```bash
-uv run python main.py create-admin \
-  --name "Admin" \
-  --email admin@example.com \
-  --password yourpassword
+```env
+SUPERADMIN_NAME=Super Admin
+SUPERADMIN_EMAIL=super@admin.com
+SUPERADMIN_PASSWORD=changeme
 ```
+
+The superadmin is created automatically when the backend starts, if no superadmin exists yet.
 
 ### Frontend
 
@@ -140,6 +146,16 @@ LLM_BASE_URL=http://localhost:11434/v1
 EMBEDDINGS_BASE_URL=http://localhost:11434/v1
 EMBEDDINGS_API_KEY=ollama
 ```
+
+### Superadmin Seed
+
+| Variable              | Default | Description                                                              |
+| --------------------- | ------- | ------------------------------------------------------------------------ |
+| `SUPERADMIN_NAME`     | —       | Display name for the superadmin. All three must be set to trigger seed.  |
+| `SUPERADMIN_EMAIL`    | —       | Email address for the superadmin account.                                |
+| `SUPERADMIN_PASSWORD` | —       | Password for the superadmin account. Change before production use.       |
+
+If all three are set and no superadmin exists, one is created automatically on startup. The seed is skipped on subsequent starts.
 
 ### Optional
 
@@ -199,31 +215,34 @@ Tokens are obtained from `POST /api/auth/login` or `POST /api/auth/register` and
 
 ### Role system
 
-Two roles exist: `admin` and `user`. Enforced via FastAPI dependencies in `app/deps.py`:
+Three roles exist: `superadmin`, `admin`, and `user`. Enforced via FastAPI dependencies in `app/deps.py`:
 
-| Dependency         | Effect                                          |
-| ------------------ | ----------------------------------------------- |
-| `get_current_user` | Requires a valid JWT; returns the `User` object |
-| `require_admin`    | Requires a valid JWT with `role == "admin"`     |
+| Dependency          | Effect                                                          |
+| ------------------- | --------------------------------------------------------------- |
+| `get_current_user`  | Requires a valid JWT; returns the `User` object                 |
+| `require_admin`     | Requires `role == "admin"` or `"superadmin"`                    |
+| `require_superadmin`| Requires `role == "superadmin"` — platform-level endpoints only |
 
 ### Endpoint reference
 
 **Auth** — public
 
-| Method | Path                 | Description                    |
-| ------ | -------------------- | ------------------------------ |
-| `POST` | `/api/auth/register` | Create an account, returns JWT |
-| `POST` | `/api/auth/login`    | Sign in, returns JWT           |
+| Method | Path                            | Description                                    |
+| ------ | ------------------------------- | ---------------------------------------------- |
+| `POST` | `/api/auth/login`               | Sign in, returns JWT                           |
+| `POST` | `/api/auth/register`            | Create an account via invite token, returns JWT |
+| `POST` | `/api/auth/register-workspace`  | Self-register a new workspace + admin account  |
 
 **Users** — admin only (except `/me`)
 
-| Method   | Path              | Description                                 |
-| -------- | ----------------- | ------------------------------------------- |
-| `GET`    | `/api/users/me`   | Current user's profile                      |
-| `GET`    | `/api/users/`     | List all users                              |
-| `POST`   | `/api/users/`     | Create a user                               |
-| `PUT`    | `/api/users/{id}` | Update a user (name, email, role, password) |
-| `DELETE` | `/api/users/{id}` | Delete a user (cannot delete yourself)      |
+| Method   | Path                  | Description                                        |
+| -------- | --------------------- | -------------------------------------------------- |
+| `GET`    | `/api/users/me`       | Current user's profile                             |
+| `GET`    | `/api/users/me/usage` | Current user's quota usage                         |
+| `GET`    | `/api/users/`         | List users in own workspace                        |
+| `POST`   | `/api/users/`         | Create a user in own workspace                     |
+| `PUT`    | `/api/users/{id}`     | Update a user (name, email, role, password)        |
+| `DELETE` | `/api/users/{id}`     | Delete a user (cannot delete yourself)             |
 
 **Documents** — authenticated
 
@@ -231,8 +250,42 @@ Two roles exist: `admin` and `user`. Enforced via FastAPI dependencies in `app/d
 | -------- | --------------------- | --------------------------------------------- |
 | `GET`    | `/api/documents/`     | List documents (all for admin, own for users) |
 | `POST`   | `/api/documents/`     | Upload a PDF document                         |
-| `PUT`    | `/api/documents/{id}` | Update title or replace PDF                   |
+| `PUT`    | `/api/documents/{id}` | Update title, collection, or replace PDF      |
 | `DELETE` | `/api/documents/{id}` | Delete a document                             |
+
+**Collections** — authenticated
+
+| Method   | Path                                          | Description                          |
+| -------- | --------------------------------------------- | ------------------------------------ |
+| `GET`    | `/api/collections/`                           | List collections in own workspace    |
+| `POST`   | `/api/collections/`                           | Create a collection                  |
+| `PUT`    | `/api/collections/{id}`                       | Rename / update a collection         |
+| `DELETE` | `/api/collections/{id}`                       | Delete collection (documents kept)   |
+| `PATCH`  | `/api/collections/{id}/documents/{doc_id}`    | Add a document to a collection       |
+| `DELETE` | `/api/collections/{id}/documents/{doc_id}`    | Remove a document from a collection  |
+
+**Workspaces** — authenticated (admin for mutations)
+
+| Method   | Path                       | Description                               |
+| -------- | -------------------------- | ----------------------------------------- |
+| `GET`    | `/api/workspaces/me`       | Get current workspace                     |
+| `PUT`    | `/api/workspaces/me`       | Update workspace name/slug                |
+| `DELETE` | `/api/workspaces/me`       | Delete workspace and all its data         |
+| `POST`   | `/api/workspaces/me/invite`| Generate a one-time invite link           |
+| `GET`    | `/api/workspaces/me/members`| List workspace members                   |
+| `DELETE` | `/api/workspaces/me/members/{id}` | Remove a member               |
+
+**Superadmin** — superadmin only
+
+| Method   | Path                           | Description                          |
+| -------- | ------------------------------ | ------------------------------------ |
+| `GET`    | `/api/superadmin/workspaces`   | List all workspaces with stats       |
+| `DELETE` | `/api/superadmin/workspaces/{id}` | Delete a workspace and all its data |
+| `GET`    | `/api/superadmin/users`        | List all users across all workspaces |
+| `PUT`    | `/api/superadmin/users/{id}`   | Update any user                      |
+| `DELETE` | `/api/superadmin/users/{id}`   | Delete any user                      |
+| `GET`    | `/api/superadmin/documents`    | List all documents platform-wide     |
+| `DELETE` | `/api/superadmin/documents/{id}` | Delete any document               |
 
 **Public** — no auth required
 
@@ -323,12 +376,8 @@ backend, and the Vite frontend with live-reload-friendly settings.
 cp backend/.env.example backend/.env
 # Edit backend/.env — set JWT_SECRET_KEY, POSTGRES_PASSWORD, and your AI API keys
 
-# 2. Build and start
+# 2. Build and start (superadmin is seeded automatically from .env)
 docker compose up --build
-
-# 3. Create the first admin
-docker compose exec backend uv run python main.py create-admin \
-  --name "Admin" --email admin@example.com --password yourpassword
 ```
 
 The frontend will be available at `http://localhost:3000` and the backend at

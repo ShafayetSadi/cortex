@@ -26,7 +26,7 @@ This repo has two compose entrypoints:
 5. [Install Dependencies](#install-dependencies)
 6. [Clone and Configure Project](#clone-and-configure-project)
 7. [Deploy the Application](#deploy-the-application)
-8. [Create Admin User](#create-admin-user)
+8. [Create Superadmin](#create-superadmin)
 9. [Set Up CI/CD](#set-up-cicd)
 
 ### Production Setup
@@ -207,6 +207,11 @@ DATABASE_URL=postgresql://cortex:cortex@db:5432/cortex
 # CORS - allow access from VM IP (update with your VM's public IP)
 CORS_ORIGINS=http://<YOUR_VM_IP>
 
+# Superadmin seed (auto-created on first startup)
+SUPERADMIN_NAME=Super Admin
+SUPERADMIN_EMAIL=super@yourdomain.com
+SUPERADMIN_PASSWORD=change-me
+
 # LLM Settings
 EMBEDDINGS_API_KEY=your-embeddings-api-key
 EMBEDDINGS_MODEL=text-embedding-3-small
@@ -293,18 +298,17 @@ You should see the Cortex homepage! 🎉
 
 ---
 
-## Create Admin User
+## Create Superadmin
 
-After the application is running, create the first admin user:
+The superadmin is created automatically on startup if you set these three variables in `backend/.env`:
 
-```bash
-docker compose exec backend uv run python main.py create-admin \
-  --name "Admin" \
-  --email admin@yourdomain.com \
-  --password "your-secure-password"
+```env
+SUPERADMIN_NAME=Super Admin
+SUPERADMIN_EMAIL=super@yourdomain.com
+SUPERADMIN_PASSWORD=your-secure-password
 ```
 
-**Note**: The backend uses `uv` for dependency management, so commands must be run with `uv run`.
+The seed runs once — if a superadmin already exists, it is skipped on subsequent restarts. Change the password to something secure before deploying.
 
 ---
 
