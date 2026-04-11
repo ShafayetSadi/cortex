@@ -127,8 +127,7 @@ def register_workspace(
 
     workspace = Workspace(name=payload.workspace_name, slug=slug)
     db.add(workspace)
-    db.commit()
-    db.refresh(workspace)
+    db.flush()  # get workspace.id without committing
 
     user = User(
         name=payload.admin_name,
@@ -138,7 +137,7 @@ def register_workspace(
         workspace_id=workspace.id,
     )
     db.add(user)
-    db.commit()
+    db.commit()  # commit both atomically
     db.refresh(user)
 
     token = create_access_token(subject=user.id)
