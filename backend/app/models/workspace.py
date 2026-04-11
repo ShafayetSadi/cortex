@@ -17,4 +17,5 @@ class Workspace(Base):
 
     users = relationship("User", back_populates="workspace", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="workspace", cascade="all, delete-orphan")
+    collections = relationship("Collection", back_populates="workspace", cascade="all, delete-orphan")
     invite_tokens = relationship("InviteToken", back_populates="workspace", cascade="all, delete-orphan")

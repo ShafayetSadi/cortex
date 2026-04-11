@@ -19,6 +19,9 @@ class Document(Base):
     workspace_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("workspaces.id"), nullable=False
     )
+    collection_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("collections.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -26,6 +29,7 @@ class Document(Base):
 
     creator = relationship("User", back_populates="documents")
     workspace = relationship("Workspace", back_populates="documents")
+    collection = relationship("Collection", back_populates="documents", passive_deletes=True)
     chunks = relationship(
         "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
     )

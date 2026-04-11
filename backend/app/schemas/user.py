@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-    role: Literal["admin", "user"] = "user"
+    role: Literal["admin", "user", "superadmin"] = "user"
 
 
 class UserCreate(UserBase):
@@ -19,7 +19,7 @@ class UserUpdate(BaseModel):
     name: str | None = None
     email: EmailStr | None = None
     password: str | None = None
-    role: Literal["admin", "user"] | None = None
+    role: Literal["admin", "user", "superadmin"] | None = None
 
 
 class UserOut(UserBase):
@@ -28,6 +28,29 @@ class UserOut(UserBase):
     created_at: datetime
     queries_today: int = 0
     queries_reset_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SuperAdminUserOut(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    workspace_id: int
+    workspace_name: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorkspaceStats(BaseModel):
+    id: int
+    name: str
+    slug: str
+    created_at: datetime
+    user_count: int
+    document_count: int
 
     model_config = ConfigDict(from_attributes=True)
 

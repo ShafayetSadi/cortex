@@ -10,12 +10,14 @@ import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 import RegisterWorkspacePage from "./pages/RegisterWorkspacePage";
+import SuperAdminPage from "./pages/SuperAdminPage";
 import UserDashboard from "./pages/UserDashboard";
 import UserManagementPage from "./pages/UserManagementPage";
 import WorkspaceSettingsPage from "./pages/WorkspaceSettingsPage";
 
 const DashboardRouter = () => {
   const { user } = useAuth();
+  if (user?.role === "superadmin") return <Navigate to="/superadmin" replace />;
   return user?.role === "admin" ? <AdminDashboard /> : <UserDashboard />;
 };
 
@@ -72,6 +74,14 @@ const App = () => {
           element={
             <ProtectedRoute role="admin">
               <WorkspaceSettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin"
+          element={
+            <ProtectedRoute role="superadmin">
+              <SuperAdminPage />
             </ProtectedRoute>
           }
         />

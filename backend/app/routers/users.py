@@ -64,6 +64,9 @@ def create_user(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use"
         )
 
+    if payload.role == "superadmin":
+        raise HTTPException(status_code=403, detail="Cannot assign superadmin role")
+
     new_user = User(
         name=payload.name,
         email=payload.email,
@@ -93,6 +96,8 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     updates = payload.model_dump(exclude_unset=True)
+    if updates.get("role") == "superadmin":
+        raise HTTPException(status_code=403, detail="Cannot assign superadmin role")
     if "password" in updates:
         updates["password"] = get_password_hash(updates["password"])
 

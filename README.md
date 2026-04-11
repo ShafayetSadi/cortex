@@ -181,8 +181,9 @@ This starts nginx, frontend, backend, and PostgreSQL, and serves the app on
 
 - [x] Foundation — JWT auth, role-based access, document CRUD, RAG-powered Q&A, user management
 - [x] Workspace provisioning — organizations self-register and manage their own workspace
+- [x] Superadmin — platform-level role to manage all workspaces, users, and documents across the system
 - [ ] Chat interface — multi-turn conversations with context carried across questions
-- [ ] Document collections — organize documents into folders within a workspace
+- [x] Document collections — organize documents into folders within a workspace
 - [ ] Streaming answers — stream tokens as the LLM generates them
 - [ ] Answer feedback — thumbs up/down to improve retrieval quality over time
 - [ ] Webhook / API access — query a workspace programmatically

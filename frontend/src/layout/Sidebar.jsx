@@ -1,9 +1,19 @@
 import { motion } from "framer-motion";
-import { LayoutDashboard, Settings, Shield, Users } from "lucide-react";
+import { Globe, LayoutDashboard, Settings, Shield, Users } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const menuGroups = {
+  superadmin: [
+    {
+      title: "Platform",
+      items: [{ to: "/superadmin", label: "Platform Admin", icon: Globe }],
+    },
+    {
+      title: "Account",
+      items: [{ to: "/profile", label: "Profile", icon: Shield }],
+    },
+  ],
   admin: [
     {
       title: "Overview",
@@ -70,7 +80,7 @@ const Sidebar = ({ open, onClose }) => {
               Workspace
             </p>
             <p className="mt-1.5 font-heading text-base font-semibold text-foreground">
-              {workspace?.name || "Cortex"}
+              {user.role === 'superadmin' ? 'Platform' : (workspace?.name || "Cortex")}
             </p>
             <p className="mt-0.5 font-mono text-xs text-muted-foreground capitalize">
               {user.name} · {user.role}

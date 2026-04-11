@@ -18,6 +18,7 @@ class DocumentOut(BaseModel):
     title: str
     description: str
     created_by: int
+    collection_id: int | None
     created_at: datetime
     updated_at: datetime
 

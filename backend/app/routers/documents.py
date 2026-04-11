@@ -13,6 +13,7 @@ from app.core.pdf import PDFExtractionError, extract_text_from_pdf
 from app.core.rag import RAGError, answer_question
 from app.deps import get_current_user
 from app.models.chunk import DocumentChunk
+from app.models.collection import Collection
 from app.models.document import Document
 from app.models.user import User
 from app.schemas.document import (
@@ -66,6 +67,7 @@ def serialize_document(doc: Document) -> DocumentOut:
         title=doc.title,
         description=doc.description,
         created_by=doc.created_by,
+        collection_id=doc.collection_id,
         created_at=doc.created_at,
         updated_at=doc.updated_at,
     )
@@ -82,12 +84,39 @@ def serialize_public_document(doc: Document) -> PublicDocumentOut:
     )
 
 
+def resolve_collection_id(
+    raw_collection_id: str | None, current_user: User, db: Session
+) -> int | None:
+    if raw_collection_id in (None, ""):
+        return None
+
+    try:
+        collection_id = int(raw_collection_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid collection") from exc
+
+    collection = (
+        db.query(Collection)
+        .filter(
+            Collection.id == collection_id,
+            Collection.workspace_id == current_user.workspace_id,
+        )
+        .first()
+    )
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return collection.id
+
+
 # --- Authenticated document management ---
 
 
 @router.get("/", response_model=list[DocumentOut])
 def list_documents(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    collection_id: int | None = None,
+    uncollected: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     query = (
         db.query(Document)
@@ -96,6 +125,10 @@ def list_documents(
     )
     if current_user.role != "admin":
         query = query.filter(Document.created_by == current_user.id)
+    if collection_id is not None:
+        query = query.filter(Document.collection_id == collection_id)
+    elif uncollected:
+        query = query.filter(Document.collection_id.is_(None))
     return [
         serialize_document(doc)
         for doc in query.order_by(Document.created_at.desc()).all()
@@ -106,6 +139,7 @@ def list_documents(
 async def create_document(
     title: str = Form(...),
     file: UploadFile = File(...),
+    collection_id: str | None = Form(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -136,6 +170,7 @@ async def create_document(
         file_data=file_bytes,
         created_by=current_user.id,
         workspace_id=current_user.workspace_id,
+        collection_id=resolve_collection_id(collection_id, current_user, db),
     )
     db.add(doc)
     db.flush()  # populate doc.id before creating chunks
@@ -150,6 +185,7 @@ async def update_document(
     document_id: int,
     title: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
+    collection_id: str | None = Form(default=None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -169,6 +205,8 @@ async def update_document(
 
     if title:
         doc.title = title
+    if collection_id is not None:
+        doc.collection_id = resolve_collection_id(collection_id, current_user, db)
 
     if file:
         if not file.filename or not file.filename.lower().endswith(".pdf"):

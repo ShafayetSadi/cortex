@@ -16,7 +16,7 @@ class User(Base):
     )
     password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(
-        Enum("admin", "user", name="user_roles"), default="user"
+        Enum("admin", "user", "superadmin", name="user_roles"), default="user"
     )
     workspace_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("workspaces.id"), nullable=False
@@ -28,4 +28,7 @@ class User(Base):
     workspace = relationship("Workspace", back_populates="users")
     documents = relationship(
         "Document", back_populates="creator", cascade="all, delete-orphan"
+    )
+    collections = relationship(
+        "Collection", back_populates="creator", cascade="all, delete-orphan"
     )

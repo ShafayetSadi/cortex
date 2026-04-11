@@ -15,10 +15,15 @@ const DocumentForm = ({
   error = '',
   docCount = 0,
   docLimit = 5,
+  collections = [],
+  defaultCollectionId = null,
 }) => {
   const [title, setTitle] = useState(defaultValues?.title ?? '')
   const [file, setFile] = useState(null)
   const [fileError, setFileError] = useState('')
+  const [collectionId, setCollectionId] = useState(
+    defaultValues?.collection_id ?? defaultCollectionId ?? ''
+  )
   const fileInputRef = useRef(null)
 
   const handleFileChange = (e) => {
@@ -39,6 +44,9 @@ const DocumentForm = ({
     const formData = new FormData()
     formData.append('title', title)
     if (file) formData.append('file', file)
+    if (collections.length > 0 || defaultValues?.collection_id) {
+      formData.append('collection_id', collectionId ?? '')
+    }
     onSubmit(formData)
   }
 
@@ -66,11 +74,11 @@ const DocumentForm = ({
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-5">
+      <CardContent className="pt-3">
         {/* Document quota bar */}
         {!isEditing && (
-          <div className="mb-4 rounded-sm border border-border bg-muted/30 px-4 py-3">
-            <div className="mb-1.5 flex items-center justify-between">
+          <div className="mb-3 rounded-sm border border-border bg-muted/30 px-3 py-2">
+            <div className="mb-1 flex items-center justify-between">
               <span className="font-mono text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Document Quota
               </span>
@@ -93,8 +101,8 @@ const DocumentForm = ({
           </div>
         )}
 
-        <form onSubmit={submit} className="grid gap-4">
-          <div className="grid gap-1.5">
+        <form onSubmit={submit} className="grid gap-3">
+          <div className="grid gap-1">
             <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Title
             </label>
@@ -107,7 +115,26 @@ const DocumentForm = ({
             />
           </div>
 
-          <div className="grid gap-1.5">
+          {collections.length > 0 && (
+            <div className="grid gap-1">
+              <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Collection
+              </label>
+              <select
+                value={collectionId ?? ''}
+                onChange={(e) => setCollectionId(e.target.value || null)}
+                disabled={atDocLimit}
+                className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">— No collection —</option>
+                {collections.map((col) => (
+                  <option key={col.id} value={col.id}>{col.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="grid gap-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 {isEditing ? 'Replace PDF (optional)' : 'PDF File'}
@@ -116,7 +143,7 @@ const DocumentForm = ({
             </div>
             <label
               className={[
-                'flex cursor-pointer flex-col items-center gap-2 rounded-sm border-2 border-dashed px-4 py-6',
+                'flex cursor-pointer flex-row items-center gap-3 rounded-sm border-2 border-dashed px-4 py-2.5',
                 'text-sm text-muted-foreground transition-colors',
                 atDocLimit ? 'cursor-not-allowed opacity-50' : '',
                 fileError ? 'border-red-400 bg-red-50 dark:bg-red-950/20' :
@@ -136,17 +163,17 @@ const DocumentForm = ({
               />
               {file ? (
                 <>
-                  <FileUp className="h-6 w-6" />
+                  <FileUp className="h-4 w-4 shrink-0" />
                   <span className="font-medium font-mono text-xs">{file.name}</span>
-                  <span className="text-xs opacity-70">
+                  <span className="text-xs opacity-70 ml-auto">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </span>
                 </>
               ) : (
                 <>
-                  <Upload className="h-6 w-6 opacity-50" />
-                  <span>Click to select a PDF file</span>
-                  {isEditing && <span className="text-xs opacity-60">Leave empty to keep current file</span>}
+                  <Upload className="h-4 w-4 shrink-0 opacity-50" />
+                  <span className="text-sm">Click to select a PDF file</span>
+                  {isEditing && <span className="text-xs opacity-60 ml-auto">Leave empty to keep current file</span>}
                 </>
               )}
             </label>
@@ -164,7 +191,7 @@ const DocumentForm = ({
             </p>
           )}
 
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2">
             <Button type="submit" disabled={loading || atDocLimit || !!fileError}>
               {loading ? 'Saving...' : submitLabel}
             </Button>

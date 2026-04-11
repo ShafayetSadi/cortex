@@ -21,8 +21,10 @@ export const AuthProvider = ({ children }) => {
       try {
         const { data } = await api.get("/api/users/me");
         setUser(data);
-        const { data: wsData } = await api.get("/api/workspaces/me");
-        setWorkspace(wsData);
+        if (data.role !== "superadmin") {
+          const { data: wsData } = await api.get("/api/workspaces/me");
+          setWorkspace(wsData);
+        }
       } catch {
         localStorage.removeItem("token");
         setToken(null);
@@ -52,8 +54,10 @@ export const AuthProvider = ({ children }) => {
 
     const me = await api.get("/api/users/me");
     setUser(me.data);
-    const ws = await api.get("/api/workspaces/me");
-    setWorkspace(ws.data);
+    if (me.data.role !== "superadmin") {
+      const ws = await api.get("/api/workspaces/me");
+      setWorkspace(ws.data);
+    }
   }, []);
 
   const register = useCallback(

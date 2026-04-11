@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.openai.com/v1"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
+    # Superadmin seed (all three must be set to auto-create on startup)
+    superadmin_name: str = ""
+    superadmin_email: str = ""
+    superadmin_password: str = ""
+
     # Usage limits
     max_file_size_mb: int = 2
     max_documents_per_workspace: int = 5

@@ -8,7 +8,7 @@ const ProtectedRoute = ({ children, role }) => {
     return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Loading...</div>
   }
   if (!user) return <Navigate to="/login" replace />
-  if (role && user.role !== role) return <Navigate to="/dashboard" replace />
+  if (role && (Array.isArray(role) ? !role.includes(user.role) : user.role !== role)) return <Navigate to="/dashboard" replace />
 
   return children
 }
