@@ -1,9 +1,9 @@
 name: Azure Spot VM Self-Heal
 
 on:
-  schedule:
+  # schedule:
     # Run every 5 minutes to detect Spot VM eviction quickly.
-    - cron: "*/5 * * * *"
+    # - cron: "*/5 * * * *"
   # Allow manual runs for validation and incident response.
   workflow_dispatch:
 
